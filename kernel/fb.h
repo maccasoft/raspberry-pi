@@ -73,7 +73,7 @@ void fb_wait_vsync();
 
 void fb_begin_doublebuffer();
 void fb_end_doublebuffer();
-void fb_flip();
+pixel_t * fb_flip();
 
 pixel_t * fb_get_pixel_address(int x, int y);
 

@@ -75,8 +75,8 @@ bss_zero_loop:
     mcr     p15, #0, r4, c8, c7, #0     /* Invalidate TLB */
     mrc     p15, #0, r4, c1, c0, #0     /* Read Control Register Configuration Data */
     orr     r4, #0x1000                 /* Instruction */
-    orr     r4, #0x0004                 /* Data */
     orr     r4, #0x0800                 /* Branch Prediction */
+    orr     r4, #0x0004                 /* Data */
     mcr     p15, #0, r4, c1, c0, #0     /* Write Control Register Configuration Data */
 
     /* Enable interrupts */

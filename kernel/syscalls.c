@@ -84,3 +84,8 @@ int _rename (const char * oldpath, const char * newpath) {
     errno = ENOSYS;
     return -1;
 }
+
+void _fini() {
+    while(1)
+        ;
+}

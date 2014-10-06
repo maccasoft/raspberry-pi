@@ -152,7 +152,7 @@
 /* Allow disabling of core subsystems */
 #define SDL_ATOMIC_DISABLED 1
 /* #undef SDL_AUDIO_DISABLED */
-/* #undef SDL_CPUINFO_DISABLED */
+#define SDL_CPUINFO_DISABLED 1
 /* #undef SDL_EVENTS_DISABLED */
 /* #undef SDL_FILE_DISABLED */
 #define SDL_JOYSTICK_DISABLED 1

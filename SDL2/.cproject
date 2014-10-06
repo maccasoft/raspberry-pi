@@ -24,30 +24,7 @@
 							<tool id="cdt.managedbuild.tool.gnu.cross.c.compiler.768521304" name="Cross GCC Compiler" superClass="cdt.managedbuild.tool.gnu.cross.c.compiler">
 								<option id="gnu.c.compiler.option.include.paths.1050830718" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false"/>
 								<option id="gnu.c.compiler.option.preprocessor.def.symbols.1571109654" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" useByScannerDiscovery="false" valueType="definedSymbols">
-									<listOptionValue builtIn="false" value="HAVE_MALLOC=1"/>
-									<listOptionValue builtIn="false" value="HAVE_SYS_TYPES_H=1"/>
-									<listOptionValue builtIn="false" value="HAVE_STDIO_H=1"/>
-									<listOptionValue builtIn="false" value="STDC_HEADERS=1"/>
-									<listOptionValue builtIn="false" value="HAVE_STRING_H=1"/>
-									<listOptionValue builtIn="false" value="HAVE_STDINT_H=1"/>
-									<listOptionValue builtIn="false" value="HAVE_CTYPE_H=1"/>
-									<listOptionValue builtIn="false" value="HAVE_MATH_H=1"/>
-									<listOptionValue builtIn="false" value="HAVE_ATAN=1"/>
-									<listOptionValue builtIn="false" value="HAVE_FLOAT_H=1"/>
-									<listOptionValue builtIn="false" value="HAVE_ACOS=1"/>
-									<listOptionValue builtIn="false" value="HAVE_ATAN2=1"/>
-									<listOptionValue builtIn="false" value="HAVE_SQRT=1"/>
-									<listOptionValue builtIn="false" value="HAVE_COS=1"/>
-									<listOptionValue builtIn="false" value="HAVE_FABS=1"/>
-									<listOptionValue builtIn="false" value="HAVE_FLOOR=1"/>
-									<listOptionValue builtIn="false" value="HAVE_LOG=1"/>
-									<listOptionValue builtIn="false" value="HAVE_POW=1"/>
-									<listOptionValue builtIn="false" value="HAVE_SCALBN=1"/>
-									<listOptionValue builtIn="false" value="HAVE_SIN=1"/>
-									<listOptionValue builtIn="false" value="HAVE_SINF=1"/>
-									<listOptionValue builtIn="false" value="HAVE_ABS=1"/>
-									<listOptionValue builtIn="false" value="HAVE_COPYSIGN=1"/>
-									<listOptionValue builtIn="false" value="SDL_ATOMIC_DISABLED=1"/>
+									<listOptionValue builtIn="false" value="__RASPBERRY__"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.181982464" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>

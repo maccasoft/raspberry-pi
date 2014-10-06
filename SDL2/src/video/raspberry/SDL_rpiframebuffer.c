@@ -27,71 +27,32 @@
 
 #include "../../../../kernel/fb.h"
 
-#define RASPBERRY_SURFACE   "_SDL_RaspberryPiSurface"
+int SDL_RASPBERRY_CreateWindowFramebuffer(_THIS, SDL_Window * window, Uint32 * format, void ** pixels, int *pitch) {
 
-int SDL_RASPBERRY_CreateWindowFramebuffer(_THIS, SDL_Window * window, Uint32 * format, void ** pixels, int *pitch)
-{
-    SDL_Surface *surface;
-    const Uint32 surface_format = SDL_PIXELFORMAT_ABGR8888;
-    int w, h;
-    int bpp;
-    Uint32 Rmask, Gmask, Bmask, Amask;
-    pixel_t * fb_pixels = fb_get_pixel_address(window->x, window->y);;
+    *format = SDL_PIXELFORMAT_ABGR8888;
+    *pixels = fb_get_pixel_address(window->x, window->y);;
+    *pitch = fb_pitch;
 
-    /* Free the old framebuffer surface */
-    surface = (SDL_Surface *) SDL_GetWindowData(window, RASPBERRY_SURFACE);
-    SDL_FreeSurface(surface);
-
-    /* Create a new one */
-    SDL_PixelFormatEnumToMasks(surface_format, &bpp, &Rmask, &Gmask, &Bmask, &Amask);
-    SDL_GetWindowSize(window, &w, &h);
-    surface = SDL_CreateRGBSurfaceFrom(fb_pixels, w, h, bpp, fb_pitch, Rmask, Gmask, Bmask, Amask);
-    if (!surface) {
-        return -1;
-    }
-
-    /* Save the info and return! */
-    SDL_SetWindowData(window, RASPBERRY_SURFACE, surface);
-    *format = surface_format;
-    *pixels = surface->pixels;
-    *pitch = surface->pitch;
     return 0;
 }
 
-int SDL_RASPBERRY_UpdateWindowFramebuffer(_THIS, SDL_Window * window, const SDL_Rect * rects, int numrects)
-{
-    //unsigned char *dst, *src;
-    SDL_Surface *surface, *window_surface;
-    //int y;
+int SDL_RASPBERRY_UpdateWindowFramebuffer(_THIS, SDL_Window * window, const SDL_Rect * rects, int numrects) {
+    SDL_Surface *surface;
 
-    surface = (SDL_Surface *) SDL_GetWindowData(window, RASPBERRY_SURFACE);
+    surface = (SDL_Surface *) SDL_GetWindowSurface(window);
     if (!surface) {
         return SDL_SetError("Couldn't find dummy surface for window");
     }
 
     fb_flip();
 
-    window_surface = SDL_GetWindowSurface(window);
-    surface->pixels = window_surface->pixels = fb_get_pixel_address(window->x, window->y);
-
-    /* Send the data to the display */
-    /*dst = (unsigned char *) (fb_addr + (window->y * fb_pitch) + window->x * 4);
-    src = (unsigned char *) surface->pixels;
-    for (y = 0; y < window->h; y++) {
-        SDL_memcpy4(dst, src, window->w);
-        dst += fb_pitch;
-        src += surface->pitch;
-    }*/
+    surface->pixels = fb_get_pixel_address(window->x, window->y);
 
     return 0;
 }
 
-void SDL_RASPBERRY_DestroyWindowFramebuffer(_THIS, SDL_Window * window)
-{
-    SDL_Surface *surface;
+void SDL_RASPBERRY_DestroyWindowFramebuffer(_THIS, SDL_Window * window) {
 
-    surface = (SDL_Surface *) SDL_SetWindowData(window, RASPBERRY_SURFACE, NULL);
-    SDL_FreeSurface(surface);
 }
 
 #endif /* SDL_VIDEO_DRIVER_RASPBERRY */

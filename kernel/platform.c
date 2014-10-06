@@ -79,6 +79,7 @@ void usleep(int usec) {
         }
     }
 }
+
 void register_timer(struct timer_wait * tw, unsigned int usec) {
     unsigned int cur_timer = mmio_read(TIMER_CLO);
 
@@ -112,5 +113,10 @@ int compare_timer(struct timer_wait * tw) {
         return 1;
     }
 
+    return 0;
+}
+
+unsigned int sleep(unsigned int seconds) {
+    usleep(seconds * 1000000);
     return 0;
 }

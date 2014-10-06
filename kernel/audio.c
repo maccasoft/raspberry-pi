@@ -120,7 +120,7 @@ uint32_t audio_write(uint32_t * stream, uint32_t samples) {
 }
 
 void audio_write_sample(uint32_t sample) {
-    *write_ptr++ = sample;
+    *write_ptr++ = sample >> 2;
     write_size++;
 
     if (write_size >= MAX_BUFFER) {

@@ -100,7 +100,7 @@ void fb_init(int width, int height) {
     mailbuffer[16] = TAG_SET_PIXEL_ORDER;
     mailbuffer[17] = 4;
     mailbuffer[18] = 4;
-    mailbuffer[19] = 1; // RGB
+    mailbuffer[19] = 0; // RGB
 
     mailbuffer[20] = TAG_SET_ALPHA_MODE;
     mailbuffer[21] = 4;
@@ -238,7 +238,7 @@ void fb_end_doublebuffer() {
     fb_addr = fb_buffer_addr[fb_buffer];
 }
 
-void fb_flip() {
+pixel_t * fb_flip() {
     unsigned int mb_addr = 0x40007000;      // 0x7000 in L2 cache coherent mode
     volatile unsigned int *mailbuffer = (unsigned int *) mb_addr;
 
@@ -256,4 +256,6 @@ void fb_flip() {
     mbox_write(MAIL_TAGS, mb_addr);
 
     mbox_read(MAIL_TAGS);
+
+    return (pixel_t *) fb_addr;
 }

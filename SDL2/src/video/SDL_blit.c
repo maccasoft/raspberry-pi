@@ -129,7 +129,11 @@ SDL_ChooseBlitFunc(Uint32 src_format, Uint32 dst_format, int flags,
                    SDL_BlitFuncEntry * entries)
 {
     int i, flagcheck;
+#ifdef __RASPBERRY__
+    static Uint32 features = SDL_CPU_ANY;
+#else
     static Uint32 features = 0xffffffff;
+
 
     /* Get the available CPU features */
     if (features == 0xffffffff) {
@@ -162,6 +166,7 @@ SDL_ChooseBlitFunc(Uint32 src_format, Uint32 dst_format, int flags,
             }
         }
     }
+#endif
 
     for (i = 0; entries[i].func; ++i) {
         /* Check for matching pixel formats */

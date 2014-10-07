@@ -31,7 +31,11 @@
 
 int SDL_RASPBERRY_CreateWindowFramebuffer(_THIS, SDL_Window * window, Uint32 * format, void ** pixels, int *pitch) {
     SDL_Surface *surface;
+#if BYTES_PER_PIXEL == 2
+    const Uint32 surface_format = SDL_PIXELFORMAT_RGB565;
+#else
     const Uint32 surface_format = SDL_PIXELFORMAT_ABGR8888;
+#endif
     int w, h;
     int bpp;
     Uint32 Rmask, Gmask, Bmask, Amask;

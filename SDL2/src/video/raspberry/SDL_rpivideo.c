@@ -47,6 +47,8 @@
 #include "SDL_rpievents_c.h"
 #include "SDL_rpiframebuffer_c.h"
 
+#include "../../../../kernel/fb.h"
+
 #define RASPBERRYVID_DRIVER_NAME "raspberry"
 
 extern uint32_t fb_width;
@@ -111,8 +113,11 @@ RASPBERRY_VideoInit(_THIS)
 {
     SDL_DisplayMode mode;
 
-    /* Use a fake 32-bpp desktop mode */
+#if BYTES_PER_PIXEL == 2
+    mode.format = SDL_PIXELFORMAT_RGB565;
+#else
     mode.format = SDL_PIXELFORMAT_ABGR8888;
+#endif
     mode.w = fb_width;
     mode.h = fb_height;
     mode.refresh_rate = 0;

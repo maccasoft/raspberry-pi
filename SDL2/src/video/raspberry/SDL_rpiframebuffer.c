@@ -27,32 +27,63 @@
 
 #include "../../../../kernel/fb.h"
 
+#define DUMMY_SURFACE   "_SDL_DummySurface"
+
 int SDL_RASPBERRY_CreateWindowFramebuffer(_THIS, SDL_Window * window, Uint32 * format, void ** pixels, int *pitch) {
+    SDL_Surface *surface;
+    const Uint32 surface_format = SDL_PIXELFORMAT_ABGR8888;
+    int w, h;
+    int bpp;
+    Uint32 Rmask, Gmask, Bmask, Amask;
 
-    *format = SDL_PIXELFORMAT_ABGR8888;
-    *pixels = fb_get_pixel_address(window->x, window->y);;
-    *pitch = fb_pitch;
+    /* Free the old framebuffer surface */
+    surface = (SDL_Surface *) SDL_GetWindowData(window, DUMMY_SURFACE);
+    SDL_FreeSurface(surface);
 
+    /* Create a new one */
+    SDL_PixelFormatEnumToMasks(surface_format, &bpp, &Rmask, &Gmask, &Bmask, &Amask);
+    SDL_GetWindowSize(window, &w, &h);
+    surface = SDL_CreateRGBSurface(0, w, h, bpp, Rmask, Gmask, Bmask, Amask);
+    if (!surface) {
+        return -1;
+    }
+
+    /* Save the info and return! */
+    SDL_SetWindowData(window, DUMMY_SURFACE, surface);
+    *format = surface_format;
+    *pixels = surface->pixels;
+    *pitch = surface->pitch;
     return 0;
 }
 
 int SDL_RASPBERRY_UpdateWindowFramebuffer(_THIS, SDL_Window * window, const SDL_Rect * rects, int numrects) {
     SDL_Surface *surface;
+    unsigned char *dst, *src;
 
-    surface = (SDL_Surface *) SDL_GetWindowSurface(window);
+    surface = (SDL_Surface *) SDL_GetWindowData(window, DUMMY_SURFACE);
     if (!surface) {
         return SDL_SetError("Couldn't find dummy surface for window");
     }
 
-    fb_flip();
+    /* Send the data to the display */
+    dst = (unsigned char *) fb_get_pixel_address(window->x, window->y);
+    src = (unsigned char *) surface->pixels;
+    for (int y = 0; y < window->h; y++) {
+        SDL_memcpy4(dst, src, window->w);
+        dst += fb_pitch;
+        src += surface->pitch;
+    }
 
-    surface->pixels = fb_get_pixel_address(window->x, window->y);
+    fb_flip();
 
     return 0;
 }
 
 void SDL_RASPBERRY_DestroyWindowFramebuffer(_THIS, SDL_Window * window) {
+    SDL_Surface *surface;
 
+    surface = (SDL_Surface *) SDL_SetWindowData(window, DUMMY_SURFACE, NULL);
+    SDL_FreeSurface(surface);
 }
 
 #endif /* SDL_VIDEO_DRIVER_RASPBERRY */

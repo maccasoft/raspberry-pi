@@ -5,7 +5,7 @@
 *	A light weight implementation of the USB protocol stack fit for a simple
 *	driver.
 *
-*	hcd/dwc/roothub.c contains code to control the DesignWare® Hi-Speed USB 2.0
+*	hcd/dwc/roothub.c contains code to control the DesignWareï¿½ Hi-Speed USB 2.0
 *	On-The-Go (HS OTG) Controller's virtual root hub. The physical USB 
 *	connection to the computer is treated as a virtual 1 port USB hub for 
 *	simplicity, allowing the USBD to control it directly with a Hub driver.
@@ -92,9 +92,9 @@ struct UsbStringDescriptor String0 = {
 	},
 };
 struct UsbStringDescriptor String1 = {
-	.DescriptorLength = sizeof(L"USB 2.0 Root Hub") + 2,
+	.DescriptorLength = 17 * sizeof(u16) + 2,
 	.DescriptorType = String,
-	.Data = L"USB 2.0 Root Hub",
+	.Data = { 'U', 'S', 'B', ' ', '2', '.', '0', ' ', 'R', 'o', 'o', 't', ' ', 'H', 'u', 'b', '\0' },
 };
 
 struct HubDescriptor HubDescriptor = {

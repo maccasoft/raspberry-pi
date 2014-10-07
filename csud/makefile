@@ -47,9 +47,8 @@ all:
 # -std=c99: Use c99 standard.
 # -fpack-struct: Do not insert unnecessary padding in structures to make them faster.
 # -Wno-packet-bitfield-compat: Do not warn about structures which would complie differently on older gcc.
-# -fshort-wchar: Treat wchar as a 16 bit value.
 # -Wall: Print lots of compiler warnings
-CFLAGS += -std=c99 -fpack-struct -Wno-packed-bitfield-compat -fshort-wchar -Wall 
+CFLAGS += -std=c99 -fpack-struct -Wno-packed-bitfield-compat -Wall 
 CFLAGS += $(patsubst %,-I%,$(INCDIRS)) 
 	
 include $(CONFIGDIR)makefile.in

@@ -69,15 +69,40 @@ bss_zero_loop:
     orr     r4, #0x400000   /* 1<22 */
     mcr     p15, #0, r4, c1, c0, #0
 
+    /* Enable MMU */
+    ldr     r1, =ttbr0              // addr(TTBR0)
+
+    ldr     r2, =0x0000040E
+    mov     r3, #0                  // from 0x00000000
+    mov     r4, #0x200              //   to 0x1FFFFFFF
+    bl      set_pgtbl_entry
+
+    ldr     r2, =0x00002416
+    mov     r3, #0x200              // from 0x20000000 (incl. peripherals)
+    mov     r4, #0x1000             //   to 0xFFFFFFFF
+    bl      set_pgtbl_entry
+
+    ldr     r2, =0x0000040E
+    mov     r3, #0x480              // framebuffer at 0x48000000
+    mov     r4, #0x490              // make 16 Mbyte cacheable
+    bl      set_pgtbl_entry
+
+    mov     r3, #3
+    mcr     p15, #0, r3, c3, c0, #0 // set domain 0 to master
+
+    mcr     p15, #0, r1, c2, c0, #0 // set TTBR0 (addr of ttbr0)  (ptblwlk inner non cacheable,
+                                    // outer non-cacheable, not shareable memory)
     /* Start L1 Cache */
-    mov     r4, #0
-    mcr     p15, #0, r4, c7, c7, #0     /* Invalidate Caches */
-    mcr     p15, #0, r4, c8, c7, #0     /* Invalidate TLB */
-    mrc     p15, #0, r4, c1, c0, #0     /* Read Control Register Configuration Data */
-    orr     r4, #0x1000                 /* Instruction */
-    orr     r4, #0x0800                 /* Branch Prediction */
-    orr     r4, #0x0004                 /* Data */
-    mcr     p15, #0, r4, c1, c0, #0     /* Write Control Register Configuration Data */
+    mov     r3, #0
+    mcr     p15, #0, r3, c7, c7, #0 /* Invalidate data cache and flush prefetch buffer */
+    mcr     p15, #0, r3, c8, c7, #0 /* Invalidate TLB */
+    mrc     p15, #0, r2, c1, c0, #0 /* Read Control Register Configuration Data */
+    orr     r2, #0x00800000
+    orr     r2, #0x00001000         /* Instruction */
+    orr     r2, #0x00000800         /* Branch Prediction */
+    orr     r2, #0x00000004         /* Data */
+    orr     r2, #0x00000001
+    mcr     p15, #0, r2, c1, c0, #0 /* Write Control Register Configuration Data */
 
     /* Enable interrupts */
     ldr     r4, =interrupt_vectors
@@ -101,6 +126,14 @@ globals_init_loop:
 hang:
     b       hang
 
+set_pgtbl_entry:
+    lsl     r0, r3, #20             // = r3 * 0x100000 (1M)
+    orr     r0, r2
+    str     r0, [r1, r3, lsl #2]
+    add     r3, #1
+    cmp     r3, r4
+    bne     set_pgtbl_entry
+    mov     pc, lr
 
 /*
  * Data memory barrier
@@ -145,3 +178,9 @@ interrupt_vectors:
     b       bad_exception /* Unused vector */
     b       interrupt_irq
     b       bad_exception /* FIQ */
+
+    .section .data
+
+    .align 14
+ttbr0:
+    .space  4 << 12                        // 4 bytes * 4096 entries

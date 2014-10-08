@@ -151,6 +151,10 @@ pixel_t cur_back;
 static int offs_x;
 static int offs_y;
 
+static pixel_t cursor_fore;
+static int     cursor_visible;
+static pixel_t cursor_buffer[CHAR_H * CHAR_W];
+
 void initscr(int width, int height) {
     if (width == 0 || height == 0) {
         width = fb_width / CHAR_W;
@@ -167,7 +171,7 @@ void initscr(int width, int height) {
     txt_height = height;
     cur_x = cur_y = 0;
 
-    cur_fore = WHITE;
+    cur_fore = cursor_fore = WHITE;
     cur_back = BLACK;
 }
 
@@ -198,6 +202,8 @@ static void console_newline() {
 }
 
 int addch(int c) {
+    hide_cursor();
+
     if (c == '\n')
         console_newline();
     else if (c == '\r') {
@@ -247,6 +253,7 @@ int addch(int c) {
 }
 
 void move(int y, int x) {
+    hide_cursor();
     cur_y = y % txt_width;
     cur_x = x % txt_height;
 }
@@ -265,6 +272,8 @@ int addstr(const char *s) {
 void clear() {
     int line_offset = offs_y * fb_pitch + offs_x * BYTES_PER_PIXEL;
 
+    hide_cursor();
+
     for (int c_y = 0; c_y < txt_height * CHAR_H; c_y++) {
         volatile pixel_t *fb = (pixel_t *) (fb_addr + line_offset);
         for (int c_x = 0; c_x < txt_width * CHAR_W; c_x++) {
@@ -279,6 +288,7 @@ void clear() {
 int mvaddstr(int y, int x, const char *s) {
     int r = 0;
 
+    hide_cursor();
     cur_y = y % txt_width;
     cur_x = x % txt_height;
 
@@ -291,6 +301,7 @@ int mvaddstr(int y, int x, const char *s) {
 }
 
 int mvaddch(int y, int x, int c) {
+    hide_cursor();
     cur_y = y % txt_width;
     cur_x = x % txt_height;
     return addch(c);
@@ -298,4 +309,47 @@ int mvaddch(int y, int x, int c) {
 
 void refresh() {
     // Do nothing, updates are immediate
+}
+
+void toggle_cursor() {
+    int line_d_offset = (offs_y + cur_y * CHAR_H) * fb_pitch + (offs_x + cur_x * CHAR_W) * BYTES_PER_PIXEL;
+    int s_offset = 0;
+
+    if (!cursor_visible) {
+        for (int c_y = 0; c_y < CHAR_H; c_y++) {
+            volatile pixel_t *fb = (pixel_t *) (fb_addr + line_d_offset);
+            for (int c_x = 0; c_x < CHAR_W; c_x++) {
+                cursor_buffer[s_offset++] = *fb;
+                *fb++ = cursor_fore;
+            }
+            line_d_offset += fb_pitch;
+        }
+        cursor_visible = 1;
+    }
+    else {
+        for (int c_y = 0; c_y < CHAR_H; c_y++) {
+            volatile pixel_t *fb = (pixel_t *) (fb_addr + line_d_offset);
+            for (int c_x = 0; c_x < CHAR_W; c_x++) {
+                *fb++ = cursor_buffer[s_offset++];
+            }
+            line_d_offset += fb_pitch;
+        }
+        cursor_visible = 0;
+    }
+}
+
+void hide_cursor() {
+    int line_d_offset = (offs_y + cur_y * CHAR_H) * fb_pitch + (offs_x + cur_x * CHAR_W) * BYTES_PER_PIXEL;
+    int s_offset = 0;
+
+    if (cursor_visible) {
+        for (int c_y = 0; c_y < CHAR_H; c_y++) {
+            volatile pixel_t *fb = (pixel_t *) (fb_addr + line_d_offset);
+            for (int c_x = 0; c_x < CHAR_W; c_x++) {
+                *fb++ = cursor_buffer[s_offset++];
+            }
+            line_d_offset += fb_pitch;
+        }
+        cursor_visible = 0;
+    }
 }

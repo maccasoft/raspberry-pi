@@ -30,6 +30,9 @@ void refresh();
 
 #define getyx(y,x)  y = cur_y; x = cur_x
 
+void toggle_cursor();
+void hide_cursor();
+
 #if defined(__cplusplus)
 }
 #endif

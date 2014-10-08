@@ -38,11 +38,11 @@ _start:
 
     /* IRQ stack at 0x2800 */
     cps     #0x12       /* Change to IRQ mode */
-    add     sp, r4, #0x2c00
+    ldr     sp, =__irq_stack_top__
 
     /* System stack at 0x2c00 */
     cps     #0x1f       /* Change to system mode */
-    add     sp, r4, #0x3c00
+    ldr     sp, =__c_stack_top__
 
     /* Stay in system mode from now on */
 

@@ -8,6 +8,13 @@ SECTIONS
         *(.text*)
         *(.rodata*)
     }
+    
+    .init_array : {
+        __init_array_start = ABSOLUTE(.);;
+        *(.init_array)
+        *(SORT_BY_INIT_PRIORITY(.init_array.*))
+        __init_array_end = ABSOLUTE(.);;
+    }
 
     .data : {
         *(.data*) 
@@ -20,13 +27,6 @@ SECTIONS
         __bss_end__ = ABSOLUTE(.);
     }
     
-    .init_array : {
-        __init_array_start = ABSOLUTE(.);;
-        *(.init_array)
-        *(SORT_BY_INIT_PRIORITY(.init_array.*))
-        __init_array_end = ABSOLUTE(.);;
-    }
-    
     .ARM.exidx : {
         *(.ARM.exidx* .gnu.linkonce.armexidx.*)
     } 
@@ -34,16 +34,10 @@ SECTIONS
     .stack : {
         __stack_start__ = ABSOLUTE(.);
 
-        . += 16384;
+        . += 262144;
         __irq_stack_top__ = ABSOLUTE(.);
 
-        . += 1024;
-        __svc_stack_top__ = ABSOLUTE(.);
-
-        . += 1024;
-        __abt_stack_top__ = ABSOLUTE(.);
-
-        . += 16384;
+        . += 262144;
         __c_stack_top__ = ABSOLUTE(.);
 
         __stack_end__ = ABSOLUTE(.);

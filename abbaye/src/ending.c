@@ -1,26 +1,38 @@
 /* ending.c */
 
-# include <stdio.h>
-# include <stdlib.h>
-# include "SDL2/SDL.h"
-# include "SDL2/SDL_image.h"
-# include "SDL2/SDL_mixer.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include "SDL.h"
+#include "SDL_image.h"
+#include "SDL_mixer.h"
+
+extern unsigned int _binary_graphics_tiles_png_start;
+extern unsigned int _binary_graphics_tiles_png_end;
+extern unsigned int _binary_graphics_ending_png_start;
+extern unsigned int _binary_graphics_ending_png_end;
+
+extern unsigned int _binary_sounds_PrayerofHopeN_ogg_start;
+extern unsigned int _binary_sounds_PrayerofHopeN_ogg_end;
 
 void ending (SDL_Window *screen,uint *state) {
 
 	/* Creating renderer */
-	SDL_Renderer *renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_PRESENTVSYNC|SDL_RENDERER_ACCELERATED);
-	SDL_SetHint("SDL_HINT_RENDER_SCALE_QUALITY", "0");
-	SDL_RenderSetLogicalSize(renderer, 256, 192);
+	SDL_Renderer *renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_SOFTWARE); // SDL_RENDERER_PRESENTVSYNC|SDL_RENDERER_ACCELERATED);
 	SDL_SetRenderDrawColor(renderer,0,0,0,255);
 
-	SDL_Texture *tiles = IMG_LoadTexture(renderer,"/usr/share/abbayev2/graphics/tiles.png");
-	SDL_Texture *text = IMG_LoadTexture(renderer,"/usr/share/abbayev2/graphics/ending.png");
+    SDL_RWops *rw = SDL_RWFromMem(&_binary_graphics_tiles_png_start,
+        (unsigned int)&_binary_graphics_tiles_png_end - (unsigned int)&_binary_graphics_tiles_png_start);
+	SDL_Texture *tiles = IMG_LoadTexture_RW(renderer,rw,1);
+    rw = SDL_RWFromMem(&_binary_graphics_ending_png_start,
+        (unsigned int)&_binary_graphics_ending_png_end - (unsigned int)&_binary_graphics_ending_png_start);
+	SDL_Texture *text = IMG_LoadTexture_RW(renderer,rw,1);
 
 	SDL_Rect srcdoor = {600,72,64,48};
 	SDL_Rect desdoor = {96,72,64,48};
 
-	Mix_Music *bso = Mix_LoadMUS("/usr/share/abbayev2/sounds/PrayerofHopeN.ogg");
+    rw = SDL_RWFromMem(&_binary_sounds_PrayerofHopeN_ogg_start,
+        (unsigned int)&_binary_sounds_PrayerofHopeN_ogg_end - (unsigned int)&_binary_sounds_PrayerofHopeN_ogg_start);
+	Mix_Music *bso = Mix_LoadMUS_RW(rw,1);
 
 	int i = 0;
 	int x = 0;
@@ -39,7 +51,7 @@ void ending (SDL_Window *screen,uint *state) {
 			x = i/60;
 		else
 			x = 5;
-		
+
 		if (i > 365)
 			SDL_RenderCopy(renderer,text,NULL,NULL);
 

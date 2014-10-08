@@ -1,15 +1,28 @@
 /* startscreen.c */
 
-# include <stdio.h>
-# include <stdlib.h>
-# include "SDL2/SDL.h"
-# include "SDL2/SDL_image.h"
-# include "SDL2/SDL_mixer.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include "SDL.h"
+#include "SDL_image.h"
+#include "SDL_mixer.h"
+
+#include <usbd/usbd.h>
+#include <device/hid/keyboard.h>
+
+extern int poll_event(SDL_Event *keyp);
+
+extern unsigned int _binary_graphics_intro_png_start;
+extern unsigned int _binary_graphics_intro_png_end;
+extern unsigned int _binary_graphics_intromd_png_start;
+extern unsigned int _binary_graphics_intromd_png_end;
+
+extern unsigned int _binary_sounds_MainTitleN_ogg_start;
+extern unsigned int _binary_sounds_MainTitleN_ogg_end;
 
 void startscreen(SDL_Window *screen,uint *state,uint *grapset,uint *fullscreen) {
 
 	/* Renderer (with VSync, nice !) */
-	SDL_Renderer *renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_PRESENTVSYNC|SDL_RENDERER_ACCELERATED);
+	SDL_Renderer *renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_SOFTWARE); // SDL_RENDERER_PRESENTVSYNC|SDL_RENDERER_ACCELERATED);
 	SDL_SetHint("SDL_HINT_RENDER_SCALE_QUALITY", "0");
 	SDL_RenderSetLogicalSize(renderer, 256, 192);
 
@@ -22,11 +35,17 @@ void startscreen(SDL_Window *screen,uint *state,uint *grapset,uint *fullscreen) 
 	SDL_Event keyp;
 
 	/* Loading PNG */
-	SDL_Texture *intro = IMG_LoadTexture(renderer,"/usr/share/abbayev2/graphics/intro.png");
-	SDL_Texture *intromd = IMG_LoadTexture(renderer,"/usr/share/abbayev2/graphics/intromd.png");
+	SDL_RWops *rw = SDL_RWFromMem(&_binary_graphics_intro_png_start,
+	    (unsigned int)&_binary_graphics_intro_png_end - (unsigned int)&_binary_graphics_intro_png_start);
+	SDL_Texture *intro = IMG_LoadTexture_RW(renderer,rw,1);
+    rw = SDL_RWFromMem(&_binary_graphics_intromd_png_start,
+        (unsigned int)&_binary_graphics_intromd_png_end - (unsigned int)&_binary_graphics_intromd_png_start);
+	SDL_Texture *intromd = IMG_LoadTexture_RW(renderer,rw,1);
 
 	/* Load audio */
-	Mix_Music *music = Mix_LoadMUS("/usr/share/abbayev2/sounds/MainTitleN.ogg");
+    rw = SDL_RWFromMem(&_binary_sounds_MainTitleN_ogg_start,
+        (unsigned int)&_binary_sounds_MainTitleN_ogg_end - (unsigned int)&_binary_sounds_MainTitleN_ogg_start);
+	Mix_Music *music = Mix_LoadMUS_RW(rw,1);
 
 	while (exit != 1) {
 
@@ -49,7 +68,7 @@ void startscreen(SDL_Window *screen,uint *state,uint *grapset,uint *fullscreen) 
 		}
 
 		/* Check keyboard */
-		if ( SDL_PollEvent(&keyp) ) {
+		if ( poll_event(&keyp) ) {
 			if (keyp.type == SDL_KEYDOWN) { /* Key pressed */
 				if (keyp.key.keysym.sym == SDLK_c) { /* Change graphic set */
 					if (*grapset == 0)
@@ -65,23 +84,9 @@ void startscreen(SDL_Window *screen,uint *state,uint *grapset,uint *fullscreen) 
 						musicplay = 0;
 					}
 				}
-				if (keyp.key.keysym.sym == SDLK_f) { /* Switch fullscreen/windowed */
-					if (*fullscreen == 0) {
-						SDL_SetWindowFullscreen(screen,SDL_WINDOW_FULLSCREEN_DESKTOP);
-						*fullscreen = 1;
-					}
-					else {
-						SDL_SetWindowFullscreen(screen,0);
-						*fullscreen = 0;
-					}
-				}
 				if (keyp.key.keysym.sym == SDLK_SPACE) { /* Start game */
 					*state = 1;
 					exit = 1;
-				}
-				if (keyp.key.keysym.sym == SDLK_ESCAPE) { /* Exit game */
-      		exit = 1;
-					*state = 6;
 				}
 			}
 		}

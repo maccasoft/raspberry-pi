@@ -2,10 +2,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "SDL2/SDL.h"
-#include "SDL2/SDL_image.h"
-#include "SDL2/SDL_mixer.h"
+#include "SDL.h"
+#include "SDL_image.h"
+#include "SDL_mixer.h"
 #include "structs.h"
+
+extern void blit_colorkey(SDL_Surface *des, SDL_Surface *src, SDL_Rect *srcrect, SDL_Rect *desrect);
 
 void movejean (struct hero *jean, Mix_Chunk *fx[]) {
 
@@ -63,7 +65,7 @@ void movejean (struct hero *jean, Mix_Chunk *fx[]) {
 
 }
 
-void drawjean (SDL_Renderer *renderer,SDL_Texture *tiles,struct hero *jean,int counter[],Mix_Chunk *fx[],uint changetiles) {
+void drawjean (SDL_Surface *renderer,SDL_Surface *tiles,struct hero *jean,int counter[],Mix_Chunk *fx[],uint changetiles) {
 
 	SDL_Rect srctile = {320,88,16,24};
 	SDL_Rect destile = {0,0,16,24};
@@ -85,7 +87,7 @@ void drawjean (SDL_Renderer *renderer,SDL_Texture *tiles,struct hero *jean,int c
 				srctile.h = (176 - jean->y);
 			if (changetiles == 1)
 				srctile.y = 208;
-			SDL_RenderCopy(renderer,tiles,&srctile,&destile);
+			blit_colorkey(renderer,tiles,&srctile,&destile);
 		}
 		else {
   		srcducktile.x += (jean->direction * 36) + ((jean->animation / 7) * 18);
@@ -93,7 +95,7 @@ void drawjean (SDL_Renderer *renderer,SDL_Texture *tiles,struct hero *jean,int c
 			desducktile.x = jean->x;
 			if (changetiles == 1)
 				srcducktile.y = 208;
-			SDL_RenderCopy(renderer,tiles,&srcducktile,&desducktile);
+			blit_colorkey(renderer,tiles,&srcducktile,&desducktile);
 		}
 	}
 
@@ -109,7 +111,7 @@ void drawjean (SDL_Renderer *renderer,SDL_Texture *tiles,struct hero *jean,int c
 			srctile.x = 368 + (jean->direction * 64);
 			if (changetiles == 1)
 				srctile.y = 208;
-			SDL_RenderCopy(renderer,tiles,&srctile,&destile);
+			blit_colorkey(renderer,tiles,&srctile,&destile);
 		}
 		if (((jean->death > 7) && (jean->death < 16)) || ((jean->death > 31) && (jean->death < 40)) || ((jean->death > 55) && (jean->death < 64))) {
 			srctile.x = 536;
@@ -117,7 +119,7 @@ void drawjean (SDL_Renderer *renderer,SDL_Texture *tiles,struct hero *jean,int c
 				srctile.y = 207;
 			else
 				srctile.y = 87;
-			SDL_RenderCopy(renderer,tiles,&srctile,&destile);
+			blit_colorkey(renderer,tiles,&srctile,&destile);
 		}
 		if (((jean->death > 15) && (jean->death < 24)) || ((jean->death > 39) && (jean->death < 48)) || ((jean->death > 63) && (jean->death < 73))) {
 			srctile.x = 520;
@@ -125,7 +127,7 @@ void drawjean (SDL_Renderer *renderer,SDL_Texture *tiles,struct hero *jean,int c
 				srctile.y = 207;
 			else
 				srctile.y = 87;
-			SDL_RenderCopy(renderer,tiles,&srctile,&destile);
+			blit_colorkey(renderer,tiles,&srctile,&destile);
 		}
 	}
 
@@ -133,9 +135,9 @@ void drawjean (SDL_Renderer *renderer,SDL_Texture *tiles,struct hero *jean,int c
 	if ((jean->flags[6] == 5) && (counter[1] == 45)) {
 		switch (jean->direction) {
 			case 0: jean->direction = 1;
-							break;
+					break;
 			case 1: jean->direction = 0;
-							break;
+					break;
 		}
 	}
 

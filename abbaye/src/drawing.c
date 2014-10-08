@@ -1,14 +1,126 @@
 /* drawing.c */
 
-# include <stdio.h>
-# include <stdlib.h>
-# include "SDL2/SDL.h"
-# include "SDL2/SDL_image.h"
-# include "SDL2/SDL_mixer.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include "SDL.h"
+#include "SDL_image.h"
+#include "SDL_mixer.h"
 
-# include "structs.h"
+#include "fb.h"
 
-void drawscreen (SDL_Renderer *renderer,uint stagedata[][22][32],SDL_Texture *tiles,uint room[],uint counter[],uint changeflag,Mix_Chunk *fx[],uint changetiles) {
+#include "structs.h"
+
+void blit(SDL_Surface *des, SDL_Surface *src, SDL_Rect *srcrect, SDL_Rect *desrect) {
+    blit_info info;
+
+    info.dst = des->pixels;
+    if (desrect != NULL) {
+        info.dst_x = desrect->x;
+        info.dst_y = desrect->y;
+        info.dst_w = desrect->w;
+        info.dst_h = desrect->h;
+    }
+    else {
+        info.dst_x = 0;
+        info.dst_y = 0;
+        info.dst_w = des->w;
+        info.dst_h = des->h;
+    }
+    info.dst_pitch = des->pitch;
+    info.src = src->pixels;
+    if (srcrect != NULL) {
+        info.src_x = srcrect->x;
+        info.src_y = srcrect->y;
+    }
+    else {
+        info.src_x = 0;
+        info.src_y = 0;
+    }
+    info.src_pitch = src->pitch;
+
+    if (info.dst_x < 0) {
+        info.dst_w += info.dst_x;
+        if (info.dst_w <= 0)
+            return;
+        info.src_x -= info.dst_x;
+        info.dst_x = 0;
+    }
+    if ((info.dst_x + info.dst_w) >= des->w) {
+        info.dst_w = des->w - info.dst_x;
+        if (info.dst_w <= 0)
+            return;
+    }
+    if (info.dst_y < 0) {
+        info.dst_h += info.dst_y;
+        if (info.dst_h <= 0)
+            return;
+        info.dst_y = 0;
+    }
+    if ((info.dst_y + info.dst_h) >= des->h) {
+        info.dst_h = des->h - info.dst_y;
+        if (info.dst_h <= 0)
+            return;
+    }
+
+    fb_blit(&info);
+}
+
+void blit_colorkey(SDL_Surface *des, SDL_Surface *src, SDL_Rect *srcrect, SDL_Rect *desrect) {
+    blit_info info;
+
+    info.dst = des->pixels;
+    if (desrect != NULL) {
+        info.dst_x = desrect->x;
+        info.dst_y = desrect->y;
+        info.dst_w = desrect->w;
+        info.dst_h = desrect->h;
+    }
+    else {
+        info.dst_x = 0;
+        info.dst_y = 0;
+        info.dst_w = des->w;
+        info.dst_h = des->h;
+    }
+    info.dst_pitch = des->pitch;
+    info.src = src->pixels;
+    if (srcrect != NULL) {
+        info.src_x = srcrect->x;
+        info.src_y = srcrect->y;
+    }
+    else {
+        info.src_x = 0;
+        info.src_y = 0;
+    }
+    info.src_pitch = src->pitch;
+
+    if (info.dst_x < 0) {
+        info.dst_w += info.dst_x;
+        if (info.dst_w <= 0)
+            return;
+        info.src_x -= info.dst_x;
+        info.dst_x = 0;
+    }
+    if ((info.dst_x + info.dst_w) >= des->w) {
+        info.dst_w = des->w - info.dst_x;
+        if (info.dst_w <= 0)
+            return;
+    }
+    if (info.dst_y < 0) {
+        info.dst_h += info.dst_y;
+        if (info.dst_h <= 0)
+            return;
+        info.dst_y = 0;
+    }
+    if ((info.dst_y + info.dst_h) >= des->h) {
+        info.dst_h = des->h - info.dst_y;
+        if (info.dst_h <= 0)
+            return;
+    }
+
+    fb_blit_colorkey(&info, (pixel_t) 0xFF000000);
+}
+
+void drawscreen (SDL_Surface *renderer,uint stagedata[][22][32],SDL_Surface *tiles,uint room[],uint counter[],uint changeflag,Mix_Chunk *fx[],uint changetiles) {
 
 	int coordx = 0;
 	int coordy = 0;
@@ -103,12 +215,12 @@ void drawscreen (SDL_Renderer *renderer,uint stagedata[][22][32],SDL_Texture *ti
 				if ((data == 152) || (data == 137) || (data == 136)) {
 					if (changeflag == 0) {
 						srctiles.y = srctiles.y + (changetiles * 120);
-						SDL_RenderCopy(renderer,tiles,&srctiles,&destiles);
+						blit(renderer,tiles,&srctiles,&destiles);
 					}
 				}
 				else {
 					srctiles.y = srctiles.y + (changetiles * 120);
-					SDL_RenderCopy(renderer,tiles,&srctiles,&destiles);
+					blit(renderer,tiles,&srctiles,&destiles);
 				}
 			}
 		}
@@ -116,7 +228,7 @@ void drawscreen (SDL_Renderer *renderer,uint stagedata[][22][32],SDL_Texture *ti
 
 }
 
-void statusbar (SDL_Renderer *renderer,SDL_Texture *tiles,int room[],int lifes,int crosses,SDL_Texture *fonts,uint changetiles) {
+void statusbar (SDL_Surface *renderer,SDL_Surface *tiles,int room[],int lifes,int crosses,SDL_Surface *fonts,uint changetiles) {
 
 	SDL_Rect srcbar = {448,104,13,12};
 	SDL_Rect desbar = {0,177,13,12};
@@ -129,38 +241,38 @@ void statusbar (SDL_Renderer *renderer,SDL_Texture *tiles,int room[],int lifes,i
 	/* Show heart and crosses sprites */
 	if (changetiles == 1)
 		srcbar.y = 224;
-	SDL_RenderCopy(renderer,tiles,&srcbar,&desbar);
+	blit(renderer,tiles,&srcbar,&desbar);
 	srcbar.x = 461;
 	srcbar.w = 12;
 	desbar.x = 32;
-	SDL_RenderCopy(renderer,tiles,&srcbar,&desbar);
+	blit(renderer,tiles,&srcbar,&desbar);
 
 	for (i=0; i<=2; i++) {
 		switch (i) {
 			case 0: srcnumbers.x = lifes * 10;
-							SDL_RenderCopy(renderer,fonts,&srcnumbers,&desnumbers);
+			        blit(renderer,fonts,&srcnumbers,&desnumbers);
 							break;
 			case 1: if (crosses < 10) {
 								desnumbers.x = 50;
 								srcnumbers.x = crosses * 10;
-								SDL_RenderCopy(renderer,fonts,&srcnumbers,&desnumbers);
+								blit(renderer,fonts,&srcnumbers,&desnumbers);
 							}
 							else {
 								desnumbers.x = 50;
 								srcnumbers.x = 10;
-								SDL_RenderCopy(renderer,fonts,&srcnumbers,&desnumbers);
+								blit(renderer,fonts,&srcnumbers,&desnumbers);
 								desnumbers.x = 55;
 								srcnumbers.x = (crosses - 10) * 10;
-								SDL_RenderCopy(renderer,fonts,&srcnumbers,&desnumbers);
+								blit(renderer,fonts,&srcnumbers,&desnumbers);
 							}
 							break;
 			case 2: if ((room[0] > 0) && (room[0] < 4)) {
 								srctext.y = (room[0] - 1) * 20;
-								SDL_RenderCopy(renderer,fonts,&srctext,&destext);
+								blit(renderer,fonts,&srctext,&destext);
 							}
 							if (room[0] > 4) {
 								srctext.y = (room[0] - 2) * 20;
-								SDL_RenderCopy(renderer,fonts,&srctext,&destext);
+								blit(renderer,fonts,&srctext,&destext);
 							}
 							break;
 		}
@@ -169,7 +281,7 @@ void statusbar (SDL_Renderer *renderer,SDL_Texture *tiles,int room[],int lifes,i
 
 }
 
-void drawrope (struct enem enemies,SDL_Renderer *renderer,SDL_Texture *tiles,uint changetiles) {
+void drawrope (struct enem enemies,SDL_Surface *renderer,SDL_Surface *tiles,uint changetiles) {
 
 	int i = 0;
 	int blocks = 0;
@@ -183,13 +295,13 @@ void drawrope (struct enem enemies,SDL_Renderer *renderer,SDL_Texture *tiles,uin
 			srctile.y = 8 + (changetiles * 120);
 	  	destile.x = enemies.x[i];
 	  	destile.y = (enemies.limleft[i] - 8) + (8 * j);
-			SDL_RenderCopy(renderer,tiles,&srctile,&destile);
+	  	blit_colorkey(renderer,tiles,&srctile,&destile);
 		}
 	}
 
 }
 
-void drawshoots (float proyec[],SDL_Texture *tiles,SDL_Renderer *renderer,struct enem *enemies,uint changetiles) {
+void drawshoots (float proyec[],SDL_Surface *tiles,SDL_Surface *renderer,struct enem *enemies,uint changetiles) {
 /* Shoots from skeletons & gargoyles */
 
 	SDL_Rect srctile = {656,24,16,8};
@@ -234,13 +346,13 @@ void drawshoots (float proyec[],SDL_Texture *tiles,SDL_Renderer *renderer,struct
 				case 0: if ((proyec[n] < (enemies->limright[i] - 8)) && (proyec[n] != 0)) {
 								  destile.x = proyec[n];
 								  destile.y = enemies->y[i] + 8;
-									SDL_RenderCopy(renderer,tiles,&srctile,&destile);
+								  blit_colorkey(renderer,tiles,&srctile,&destile);
 								}
 								break;
 				case 1: if (proyec[n] > (enemies->limleft[i] + 8)) {
 								  destile.x = proyec[n];
 								  destile.y = enemies->y[i] + 8;
-									SDL_RenderCopy(renderer,tiles,&srctile,&destile);
+								  blit_colorkey(renderer,tiles,&srctile,&destile);
 								}
 								break;
 	  	}
@@ -250,34 +362,67 @@ void drawshoots (float proyec[],SDL_Texture *tiles,SDL_Renderer *renderer,struct
 
 }
 
+extern unsigned int _binary_graphics_parchment1_png_start;
+extern unsigned int _binary_graphics_parchment1_png_end;
+extern unsigned int _binary_graphics_parchment2_png_start;
+extern unsigned int _binary_graphics_parchment2_png_end;
+extern unsigned int _binary_graphics_parchment3_png_start;
+extern unsigned int _binary_graphics_parchment3_png_end;
+extern unsigned int _binary_graphics_parchment4_png_start;
+extern unsigned int _binary_graphics_parchment4_png_end;
+extern unsigned int _binary_graphics_parchment5_png_start;
+extern unsigned int _binary_graphics_parchment5_png_end;
+extern unsigned int _binary_graphics_parchment6_png_start;
+extern unsigned int _binary_graphics_parchment6_png_end;
+
 void showparchment (SDL_Renderer *renderer,uint *parchment) {
 
-	SDL_Texture *yparchment = NULL;
+    SDL_RWops *rw = NULL;
 
 	switch (*parchment) {
-		case 3: yparchment = IMG_LoadTexture(renderer,"/usr/share/abbayev2/graphics/parchment1.png");
-						break;
-		case 8:	yparchment = IMG_LoadTexture(renderer,"/usr/share/abbayev2/graphics/parchment2.png");
-						break;
-		case 12: yparchment = IMG_LoadTexture(renderer,"/usr/share/abbayev2/graphics/parchment3.png");
-						 break;
-		case 14: yparchment = IMG_LoadTexture(renderer,"/usr/share/abbayev2/graphics/parchment4.png");
-						 break;
-		case 16: yparchment = IMG_LoadTexture(renderer,"/usr/share/abbayev2/graphics/parchment5.png");
-						 break;
-		case 21: yparchment = IMG_LoadTexture(renderer,"/usr/share/abbayev2/graphics/parchment6.png");
-						 break;
+		case 3:
+		    rw = SDL_RWFromMem(&_binary_graphics_parchment1_png_start,
+		        (unsigned int)&_binary_graphics_parchment1_png_end - (unsigned int)&_binary_graphics_parchment1_png_start);
+			break;
+		case 8:
+            rw = SDL_RWFromMem(&_binary_graphics_parchment2_png_start,
+                (unsigned int)&_binary_graphics_parchment2_png_end - (unsigned int)&_binary_graphics_parchment2_png_start);
+			break;
+		case 12:
+            rw = SDL_RWFromMem(&_binary_graphics_parchment3_png_start,
+                (unsigned int)&_binary_graphics_parchment3_png_end - (unsigned int)&_binary_graphics_parchment3_png_start);
+			break;
+		case 14:
+            rw = SDL_RWFromMem(&_binary_graphics_parchment4_png_start,
+                (unsigned int)&_binary_graphics_parchment4_png_end - (unsigned int)&_binary_graphics_parchment4_png_start);
+			break;
+		case 16:
+            rw = SDL_RWFromMem(&_binary_graphics_parchment5_png_start,
+                (unsigned int)&_binary_graphics_parchment5_png_end - (unsigned int)&_binary_graphics_parchment5_png_start);
+			break;
+		case 21:
+            rw = SDL_RWFromMem(&_binary_graphics_parchment6_png_start,
+                (unsigned int)&_binary_graphics_parchment6_png_end - (unsigned int)&_binary_graphics_parchment6_png_start);
+			break;
 
 	}
 
-	SDL_RenderCopy(renderer,yparchment,NULL,NULL);
-	SDL_DestroyTexture(yparchment);
+	if (rw != NULL) {
+	    SDL_Texture *yparchment = IMG_LoadTexture_RW(renderer,rw,1);
+	    SDL_RenderCopy(renderer,yparchment,NULL,NULL);
+	    SDL_DestroyTexture(yparchment);
+	}
 
 }
 
+extern unsigned int _binary_graphics_redparch_png_start;
+extern unsigned int _binary_graphics_redparch_png_end;
+
 void redparchment (SDL_Renderer *renderer,struct hero *jean) {
 
-	SDL_Texture *rparchment = IMG_LoadTexture(renderer,"/usr/share/abbayev2/graphics/redparch.png");
+    SDL_RWops *rw = SDL_RWFromMem(&_binary_graphics_redparch_png_start,
+        (unsigned int)&_binary_graphics_redparch_png_end - (unsigned int)&_binary_graphics_redparch_png_start);
+	SDL_Texture *rparchment = IMG_LoadTexture_RW(renderer,rw,1);
 	SDL_RenderCopy(renderer,rparchment,NULL,NULL);
 	SDL_DestroyTexture(rparchment);
 
@@ -285,9 +430,14 @@ void redparchment (SDL_Renderer *renderer,struct hero *jean) {
 
 }
 
+extern unsigned int _binary_graphics_blueparch_png_start;
+extern unsigned int _binary_graphics_blueparch_png_end;
+
 void blueparchment (SDL_Renderer *renderer,struct hero *jean) {
 
-	SDL_Texture *bparchment = IMG_LoadTexture(renderer,"/usr/share/abbayev2/graphics/blueparch.png");
+    SDL_RWops *rw = SDL_RWFromMem(&_binary_graphics_blueparch_png_start,
+        (unsigned int)&_binary_graphics_blueparch_png_end - (unsigned int)&_binary_graphics_blueparch_png_start);
+	SDL_Texture *bparchment = IMG_LoadTexture_RW(renderer,rw,1);
 	SDL_RenderCopy(renderer,bparchment,NULL,NULL);
 	SDL_DestroyTexture(bparchment);
 

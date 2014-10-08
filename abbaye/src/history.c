@@ -2,25 +2,44 @@
 
 # include <stdio.h>
 # include <stdlib.h>
-# include "SDL2/SDL.h"
-# include "SDL2/SDL_image.h"
-# include "SDL2/SDL_mixer.h"
+#include "SDL.h"
+#include "SDL_image.h"
+#include "SDL_mixer.h"
+
+extern int poll_event(SDL_Event *keyp);
+
+extern unsigned int _binary_graphics_tiles_png_start;
+extern unsigned int _binary_graphics_tiles_png_end;
+extern unsigned int _binary_graphics_history_png_start;
+extern unsigned int _binary_graphics_history_png_end;
+
+extern unsigned int _binary_sounds_ManhuntN_ogg_start;
+extern unsigned int _binary_sounds_ManhuntN_ogg_end;
+
+extern void blit(SDL_Surface *des, SDL_Surface *src, SDL_Rect *srcrect, SDL_Rect *desrect);
 
 void history(SDL_Window *screen,uint *state,uint *grapset,uint *fullscreen) {
 
 	/* Renderer */
-	SDL_Renderer *renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_PRESENTVSYNC|SDL_RENDERER_ACCELERATED);
-	SDL_SetHint("SDL_HINT_RENDER_SCALE_QUALITY", "0");
-	SDL_RenderSetLogicalSize(renderer, 256, 192);
+	SDL_Renderer *renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_SOFTWARE); // SDL_RENDERER_PRESENTVSYNC|SDL_RENDERER_ACCELERATED);
+	//SDL_SetHint("SDL_HINT_RENDER_SCALE_QUALITY", "0");
+	//SDL_RenderSetLogicalSize(renderer, 256, 192);
+	SDL_Surface * screen_surface = SDL_GetWindowSurface(screen);
 
 	SDL_Event keyp;
 
 	/* Load audio */
-	Mix_Music *music = Mix_LoadMUS("/usr/share/abbayev2/sounds/ManhuntN.ogg");
+	SDL_RWops *rw = SDL_RWFromMem(&_binary_sounds_ManhuntN_ogg_start,
+        (unsigned int)&_binary_sounds_ManhuntN_ogg_end - (unsigned int)&_binary_sounds_ManhuntN_ogg_start);
+    Mix_Music *music = Mix_LoadMUS_RW(rw,1);
 
 	/* Loading PNG */
-	SDL_Texture *tiles = IMG_LoadTexture(renderer,"/usr/share/abbayev2/graphics/tiles.png");
-	SDL_Texture *text = IMG_LoadTexture(renderer,"/usr/share/abbayev2/graphics/history.png");
+    rw = SDL_RWFromMem(&_binary_graphics_tiles_png_start,
+        (unsigned int)&_binary_graphics_tiles_png_end - (unsigned int)&_binary_graphics_tiles_png_start);
+	SDL_Surface *tiles = IMG_Load_RW(rw,1);
+    rw = SDL_RWFromMem(&_binary_graphics_history_png_start,
+        (unsigned int)&_binary_graphics_history_png_end - (unsigned int)&_binary_graphics_history_png_start);
+	SDL_Surface *text = IMG_Load_RW(rw,1);
 
 	SDL_Rect srcjean = {384,88,16,24};
 	SDL_Rect desjean = {0,100,16,24};
@@ -46,7 +65,7 @@ void history(SDL_Window *screen,uint *state,uint *grapset,uint *fullscreen) {
 		}
 
 		/* Show text */
-		SDL_RenderCopy(renderer,text,NULL,NULL);
+		blit(screen_surface,text,NULL,NULL);
 
 		/* Animation control */
 		if (animation < 13)
@@ -60,7 +79,7 @@ void history(SDL_Window *screen,uint *state,uint *grapset,uint *fullscreen) {
 			desjean.x = posjean;
 			srcjean.x = 384 + ((animation / 7) * 16); /* Walking animation */
 			srcjean.y = 88 + (*grapset * 120); /* 8 or 16 bits sprite */
-			SDL_RenderCopy(renderer,tiles,&srcjean,&desjean);
+			blit(screen_surface,tiles,&srcjean,&desjean);
 		}
 
 		/* Crusaders running */
@@ -75,7 +94,7 @@ void history(SDL_Window *screen,uint *state,uint *grapset,uint *fullscreen) {
 				desenem.x = posenem[i];
 				srcenem.x = 96 + ((animation / 7) * 16);
 				srcenem.y = 64 + (*grapset * 120);
-				SDL_RenderCopy(renderer,tiles,&srcenem,&desenem);
+				blit(screen_surface,tiles,&srcenem,&desenem);
 			}
 		}
 
@@ -88,23 +107,9 @@ void history(SDL_Window *screen,uint *state,uint *grapset,uint *fullscreen) {
 					else
 						*grapset = 0;
 				}
-				if (keyp.key.keysym.sym == SDLK_f) { /* Switch fullscreen/windowed */
-					if (*fullscreen == 0) {
-						SDL_SetWindowFullscreen(screen,SDL_WINDOW_FULLSCREEN_DESKTOP);
-						*fullscreen = 1;
-					}
-					else {
-						SDL_SetWindowFullscreen(screen,0);
-						*fullscreen = 0;
-					}
-				}
 				if (keyp.key.keysym.sym == SDLK_SPACE) { /* Start game */
 					*state = 2;
 					exit = 1;
-				}
-				if (keyp.key.keysym.sym == SDLK_ESCAPE) { /* Exit game */
-      		exit = 1;
-					*state = 6;
 				}
 			}
 		}
@@ -120,8 +125,8 @@ void history(SDL_Window *screen,uint *state,uint *grapset,uint *fullscreen) {
 	}
 
 	/* Cleaning */
-	SDL_DestroyTexture(tiles);
-	SDL_DestroyTexture(text);
+	SDL_FreeSurface(tiles);
+	SDL_FreeSurface(text);
 	SDL_DestroyRenderer(renderer);
 	Mix_FreeMusic(music);
 

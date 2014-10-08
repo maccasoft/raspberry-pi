@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "platform.h"
 #include "fb.h"
 
@@ -247,4 +249,35 @@ pixel_t * fb_flip() {
     mbox_read(MAIL_TAGS);
 
     return (pixel_t *) fb_addr;
+}
+
+void fb_blit(blit_info * info) {
+    int size = info->dst_w * sizeof(pixel_t);
+    uchar_t * dst_ptr = info->dst + info->dst_y * info->dst_pitch + info->dst_x * sizeof(pixel_t);
+    uchar_t * src_ptr = info->src + info->src_y * info->src_pitch + info->src_x * sizeof(pixel_t);
+
+    for (int y = 0; y < info->dst_h; y++) {
+        memcpy(dst_ptr, src_ptr, size);
+        dst_ptr += info->dst_pitch;
+        src_ptr += info->src_pitch;
+    }
+}
+
+void fb_blit_colorkey(blit_info * info, pixel_t key) {
+    pixel_t data;
+    uchar_t * dst_ptr = info->dst + info->dst_y * info->dst_pitch + info->dst_x * sizeof(pixel_t);
+    uchar_t * src_ptr = info->src + info->src_y * info->src_pitch + info->src_x * sizeof(pixel_t);
+
+    for (int y = 0; y < info->dst_h; y++) {
+        pixel_t * src = (pixel_t *) src_ptr;
+        pixel_t * dst = (pixel_t *) dst_ptr;
+        for (int x = 0; x < info->dst_w; x++, src++, dst++) {
+            data = *src;
+            if (data != key) {
+                *dst = data;
+            }
+        }
+        dst_ptr += info->dst_pitch;
+        src_ptr += info->src_pitch;
+    }
 }

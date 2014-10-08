@@ -63,6 +63,23 @@ extern uint32_t fb_addr;
 extern uint32_t fb_size;
 extern uint32_t fb_pitch;
 
+#ifndef uchar_t
+typedef unsigned char uchar_t;
+#endif
+
+typedef struct {
+    uchar_t * dst;
+    int32_t   dst_x;
+    int32_t   dst_y;
+    int32_t   dst_w;
+    int32_t   dst_h;
+    int32_t   dst_pitch;
+    uchar_t * src;
+    int32_t   src_x;
+    int32_t   src_y;
+    int32_t   src_pitch;
+} blit_info;
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -79,6 +96,9 @@ pixel_t * fb_get_pixel_address(int x, int y);
 
 void fb_draw_rectangle(int x0, int y0, int x1, int y1, pixel_t color);
 void fb_fill_rectangle(int x0, int y0, int x1, int y1, pixel_t color);
+
+void fb_blit(blit_info * info);
+void fb_blit_colorkey(blit_info * info, pixel_t key);
 
 #if defined(__cplusplus)
 }

@@ -30,10 +30,96 @@
 #include "SDL_rpivideo.h"
 #include "SDL_rpievents_c.h"
 
+#ifdef HAVE_CSUD
+#include "usbd/usbd.h"
+#include "device/hid/keyboard.h"
+
+#define MAX_KEYS        6
+
+static int keydown[MAX_KEYS] = { 0, 0, 0, 0, 0, 0 };
+static struct KeyboardModifiers modifiers;
+static struct KeyboardModifiers old_modifiers;
+#endif // HAVE_CSUD
+
 void
 RASPBERRY_PumpEvents(_THIS)
 {
-    /* do nothing. */
+#ifdef HAVE_CSUD
+    u32 kbdCount = KeyboardCount();
+    if (kbdCount == 0) {
+        for (int i = 0; i < MAX_KEYS; i++) {
+            keydown[i] = 0;
+        }
+        return;
+    }
+
+    u32 kbdAddress = KeyboardGetAddress(0);
+    if (kbdAddress == 0) {
+        for (int i = 0; i < MAX_KEYS; i++) {
+            keydown[i] = 0;
+        }
+        return;
+    }
+
+    KeyboardPoll(kbdAddress);
+
+    modifiers = KeyboardGetModifiers(kbdAddress);
+    if (modifiers.LeftShift != old_modifiers.LeftShift) {
+        SDL_SendKeyboardKey(modifiers.LeftShift ? SDL_PRESSED : SDL_RELEASED, SDL_SCANCODE_LSHIFT);
+    }
+    if (modifiers.RightShift != old_modifiers.RightShift) {
+        SDL_SendKeyboardKey(modifiers.RightShift ? SDL_PRESSED : SDL_RELEASED, SDL_SCANCODE_RSHIFT);
+    }
+    if (modifiers.LeftAlt != old_modifiers.LeftAlt) {
+        SDL_SendKeyboardKey(modifiers.LeftAlt ? SDL_PRESSED : SDL_RELEASED, SDL_SCANCODE_LALT);
+    }
+    if (modifiers.RightAlt != old_modifiers.RightAlt) {
+        SDL_SendKeyboardKey(modifiers.RightAlt ? SDL_PRESSED : SDL_RELEASED, SDL_SCANCODE_RALT);
+    }
+    if (modifiers.LeftControl != old_modifiers.LeftControl) {
+        SDL_SendKeyboardKey(modifiers.LeftControl ? SDL_PRESSED : SDL_RELEASED, SDL_SCANCODE_LCTRL);
+    }
+    if (modifiers.RightControl != old_modifiers.RightControl) {
+        SDL_SendKeyboardKey(modifiers.RightControl ? SDL_PRESSED : SDL_RELEASED, SDL_SCANCODE_RCTRL);
+    }
+    if (modifiers.LeftGui != old_modifiers.LeftGui) {
+        SDL_SendKeyboardKey(modifiers.LeftGui ? SDL_PRESSED : SDL_RELEASED, SDL_SCANCODE_LGUI);
+    }
+    if (modifiers.RightGui != old_modifiers.RightGui) {
+        SDL_SendKeyboardKey(modifiers.RightGui ? SDL_PRESSED : SDL_RELEASED, SDL_SCANCODE_RGUI);
+    }
+    old_modifiers = modifiers;
+
+    int keydownCount = KeyboardGetKeyDownCount(kbdAddress);
+    for (int index = 0; index < keydownCount; index++) {
+        u16 key = KeyboardGetKeyDown(kbdAddress, index);
+        for (int i = 0; i < MAX_KEYS; i++) {
+            if (key == keydown[i]) {
+                key = 0;
+                break;
+            }
+        }
+        if (key != 0) {
+            for (int i = 0; i < MAX_KEYS; i++) {
+                if (keydown[i] == 0) {
+                    SDL_SendKeyboardKey(SDL_PRESSED, key);
+                    keydown[i] = key;
+                    break;
+                }
+            }
+        }
+    }
+
+    for (int index = 0; index < MAX_KEYS; index++) {
+        u16 key = keydown[index];
+        if (key != 0) {
+            if (!KeyboadGetKeyIsDown(kbdAddress, key)) {
+                SDL_SendKeyboardKey(SDL_RELEASED, key);
+                keydown[index] = 0;
+            }
+        }
+    }
+#endif // HAVE_CSUD
 }
 
 #endif /* SDL_VIDEO_DRIVER_RASPBERRY */

@@ -146,6 +146,8 @@
 #define HAVE_GCC_SYNC_LOCK_TEST_AND_SET 1
 #endif
 
+#define HAVE_CSUD
+
 /* SDL internal assertion support */
 /* #undef SDL_DEFAULT_ASSERT_LEVEL */
 

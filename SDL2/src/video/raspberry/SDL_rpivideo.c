@@ -49,6 +49,11 @@
 
 #include "../../../../kernel/fb.h"
 
+#ifdef HAVE_CSUD
+#include "usbd/usbd.h"
+#include "device/hid/keyboard.h"
+#endif // HAVE_CSUD
+
 #define RASPBERRYVID_DRIVER_NAME "raspberry"
 
 extern uint32_t fb_width;
@@ -98,6 +103,10 @@ RASPBERRY_CreateDevice(int devindex)
     device->GetDisplayBounds = SDL_RASPBERRY_GetDisplayBounds;
 
     device->free = RASPBERRY_DeleteDevice;
+
+#ifdef HAVE_CSUD
+    UsbInitialise();
+#endif // HAVE_CSUD
 
     return device;
 }

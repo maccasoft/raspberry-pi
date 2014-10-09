@@ -27,6 +27,8 @@ volatile struct PowerReg *PowerPhysical, *Power = NULL;
 bool PhyInitialised = false;
 u8* databuffer = NULL;
 
+extern void flush_cache();
+
 void DwcLoad()
 {
 	LOG_DEBUG("CSUD: DesignWare Hi-Speed USB 2.0 On-The-Go (HS OTG) Controller driver version 0.1\n");
@@ -269,9 +271,7 @@ Result HcdPrepareChannel(struct UsbDevice *device, u8 channel,
 }
 
 void HcdTransmitChannel(u8 channel, void* buffer) {
-    int cr = 0;
-
-    __asm volatile ("mcr p15, 0, %0, c7, c14, 0" :: "r" (cr));
+    flush_cache();
 
 	ReadBackReg(&Host->Channel[channel].SplitControl);
 	Host->Channel[channel].SplitControl.CompleteSplit = false;

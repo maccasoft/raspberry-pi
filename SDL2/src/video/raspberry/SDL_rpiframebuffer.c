@@ -25,6 +25,7 @@
 #include "../SDL_sysvideo.h"
 #include "SDL_rpiframebuffer_c.h"
 
+#include "../../../../kernel/platform.h"
 #include "../../../../kernel/fb.h"
 
 int SDL_RASPBERRY_CreateWindowFramebuffer(_THIS, SDL_Window * window, Uint32 * format, void ** pixels, int *pitch) {
@@ -44,7 +45,9 @@ int SDL_RASPBERRY_UpdateWindowFramebuffer(_THIS, SDL_Window * window, const SDL_
         return SDL_SetError("Couldn't find surface for window");
     }
 
+    flush_cache();
     fb_flip();
+
     surface->pixels = fb_get_pixel_address(window->x, window->y);
 
     return 0;

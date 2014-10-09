@@ -211,7 +211,7 @@ int addch(int c) {
     }
     else if (c == '\t') {
         cur_x = ((cur_x / 8) + 1) * 8;
-        if (cur_x > txt_width) {
+        if (cur_x >= txt_width) {
             console_newline();
             cur_x -= txt_width;
         }
@@ -254,8 +254,16 @@ int addch(int c) {
 
 void move(int y, int x) {
     hide_cursor();
-    cur_y = y % txt_width;
-    cur_x = x % txt_height;
+
+    while(y < 0) {
+        y += txt_height;
+    }
+    while(x < 0) {
+        x += txt_width;
+    }
+
+    cur_y = y % txt_height;
+    cur_x = x % txt_width;
 }
 
 int addstr(const char *s) {
@@ -302,8 +310,17 @@ int mvaddstr(int y, int x, const char *s) {
 
 int mvaddch(int y, int x, int c) {
     hide_cursor();
-    cur_y = y % txt_width;
-    cur_x = x % txt_height;
+
+    while(y < 0) {
+        y += txt_height;
+    }
+    while(x < 0) {
+        x += txt_width;
+    }
+
+    cur_y = y % txt_height;
+    cur_x = x % txt_width;
+
     return addch(c);
 }
 

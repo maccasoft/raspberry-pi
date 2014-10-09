@@ -162,7 +162,7 @@ dsb:
  */
 flush_cache:
     mov     r0, #0
-    mcr     p15, #0, r0, c7, c10, #0
+    mcr     p15, #0, r0, c7, c14, #0
     mov     pc, lr
 
 /*

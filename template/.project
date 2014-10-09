@@ -4,6 +4,8 @@
 	<comment></comment>
 	<projects>
 		<project>kernel</project>
+		<project>csud</project>
+		<project>libvorbis</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

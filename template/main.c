@@ -5,9 +5,6 @@
 #include "platform.h"
 #include "wiring.h"
 #include "console.h"
-#include "audio.h"
-
-#include "audio_data.h"
 
 #if BYTES_PER_PIXEL == 2
 
@@ -28,115 +25,146 @@ extern "C" {
 __attribute__ ((interrupt ("IRQ"))) void interrupt_irq() {
     if ((IRQ->irqBasicPending & INTERRUPT_ARM_TIMER) != 0)
         ;
-    if ((IRQ->irq1Pending & INTERRUPT_DMA0) != 0) {
-        audio_dma_irq();
-    }
 }
 
 #if defined(__cplusplus)
 }
 #endif
 
-typedef struct {
-    char   *curPtr;
-    char   *filePtr;
-    size_t  fileSize;
-} ogg_file;
+#define KEY_ESC     0x2900
 
-ogg_file of;
+#define KEY_F1      0x3A00
+#define KEY_F2      0x3B00
+#define KEY_F3      0x3C00
+#define KEY_F4      0x3D00
+#define KEY_F5      0x3E00
+#define KEY_F6      0x3F00
+#define KEY_F7      0x4000
+#define KEY_F8      0x4100
+#define KEY_F9      0x4200
+#define KEY_F10     0x4300
+#define KEY_F11     0x4400
+#define KEY_F12     0x4500
 
-size_t AR_readOgg(void *dst, size_t size1, size_t size2, void *fh) {
-    ogg_file *of = (ogg_file *)fh;
-    size_t len = size1 * size2;
-    if (of->curPtr + len > of->filePtr + of->fileSize) {
-        len = of->filePtr + of->fileSize - of->curPtr;
-    }
-    memcpy(dst, of->curPtr, len);
-    of->curPtr += len;
-    return len;
-}
+#define KEY_CANC    0x4C00
+#define KEY_INS     0x4900
+#define KEY_PGDN    0x4E00
+#define KEY_PGUP    0x4B00
+#define KEY_END     0x4D00
+#define KEY_HOME    0x4A00
+#define KEY_RIGHT   0x4F00
+#define KEY_LEFT    0x5000
+#define KEY_DOWN    0x5100
+#define KEY_UP      0x5200
 
-int AR_seekOgg(void *fh, int64_t to, int type) {
-    ogg_file *of = (ogg_file *)fh;
+#ifdef HAVE_CSUD
 
-    switch (type) {
-        case SEEK_CUR:
-            of->curPtr += to;
-            break;
-        case SEEK_END:
-            of->curPtr = of->filePtr + of->fileSize - to;
-            break;
-        case SEEK_SET:
-            of->curPtr = of->filePtr + to;
-            break;
-        default:
-            return -1;
-    }
-    if (of->curPtr < of->filePtr) {
-        of->curPtr = of->filePtr;
+#include <usbd/usbd.h>
+#include <device/hid/keyboard.h>
+
+#define SWAP_BYTES(b)   (((b & 0xFF) << 8) | ((b & 0xFF00) >> 8))
+
+static unsigned char keyNormal_it[] = {
+    0x0, 0x0, 0x0, 0x0, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
+    'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '1', '2',
+    '3', '4', '5', '6', '7', '8', '9', '0', '\r', 0x0, '\b', '\t', ' ', '\'', 0x0, 0x0,
+    '+', '<', 0x0, 0x0, 0x0, '\\', ',', '.', '-', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+    0x0, 0x0, 0x0, 0x0, '/', '*', '-', '+', '\r', '1', '2', '3', '4', '5', '6', '7',
+    '8', '9', '0', '.', '<', 0x0, 0x0, '='
+};
+
+static unsigned char keyShift_it[] = {
+    0x0, 0x0, 0x0, 0x0, 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+    'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '"',
+    0x0, '$', '%', '&', '/', '(', ')', '=', '\r', 0x0, '\b', '\t', ' ', '?', '^', 0x0,
+    '*', '>', 0x0, 0x0, 0x0, '|', ';', ':', '_', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+    0x0, 0x0, 0x0, 0x0, '/', '*', '-', '+', '\r', '1', '2', '3', '4', '5', '6', '7',
+    '8', '9', '0', '.', '>', 0x0, 0x0, '='
+};
+
+#define MAX_KEYS        6
+
+int kbd_getchar() {
+    static int keydown[MAX_KEYS] = { 0, 0, 0, 0, 0, 0 };
+
+    u32 kbdCount = KeyboardCount();
+    if (kbdCount == 0) {
+        for (int i = 0; i < MAX_KEYS; i++) {
+            keydown[i] = 0;
+        }
         return -1;
     }
-    if (of->curPtr > of->filePtr + of->fileSize) {
-        of->curPtr = of->filePtr + of->fileSize;
+
+    u32 kbdAddress = KeyboardGetAddress(0);
+    if (kbdAddress == 0) {
+        for (int i = 0; i < MAX_KEYS; i++) {
+            keydown[i] = 0;
+        }
         return -1;
     }
-    return 0;
-}
 
-int AR_closeOgg(void *fh) {
-    return 0;
-}
+    struct KeyboardModifiers modifiers = KeyboardGetModifiers(kbdAddress);
 
-long AR_tellOgg(void *fh) {
-    ogg_file *of = (ogg_file *)fh;
-    return (of->curPtr - of->filePtr);
-}
-
-void audio_callback(uint32_t * stream, uint32_t samples) {
-    uint32_t s1, s2, sample;
-
-    for (int i = 0; i < samples; i += 2) {
-        s1 = s2 = 0;
-
-        if (AR_readOgg(&s1, 1, sizeof(s1), &of) != sizeof(s1)) {
-            AR_seekOgg(&of, 0, SEEK_SET);
-            AR_readOgg(&s1, 1, sizeof(s1), &of);
+    u32 count = KeyboardGetKeyDownCount(kbdAddress);
+    for (int index = 0; index < count && index < MAX_KEYS; index++) {
+        u16 key = KeyboardGetKeyDown(kbdAddress, index);
+        for (int i = 0; i < MAX_KEYS; i++) {
+            if (key == keydown[i]) {
+                key = 0;
+                break;
+            }
         }
-
-        AR_readOgg(&s2, 1, sizeof(s2), &of);
-
-        sample = (s1 + s2) >> 1;
-
-        *stream++ = sample;
-        *stream++ = sample;
-    }
-}
-
-void audio_write_chunk() {
-    uint32_t s1, s2, sample;
-
-    for (int i = 0; i < 256; i++) {
-        s1 = s2 = 0;
-
-        if (AR_readOgg(&s1, 1, sizeof(s1), &of) != sizeof(s1)) {
-            AR_seekOgg(&of, 0, SEEK_SET);
-            AR_readOgg(&s1, 1, sizeof(s1), &of);
+        if (key != 0) {
+            for (int i = 0; i < MAX_KEYS; i++) {
+                if (keydown[i] == 0) {
+                    keydown[i] = key;
+                    if (modifiers.LeftShift || modifiers.RightShift) {
+                        if (key >= sizeof(keyShift_it)) {
+                            return key;
+                        }
+                        return keyShift_it[key] != 0 ? keyShift_it[key] : SWAP_BYTES(key);
+                    }
+                    else {
+                        if (key >= sizeof(keyNormal_it)) {
+                            return key;
+                        }
+                        return keyNormal_it[key] != 0 ? keyNormal_it[key] : SWAP_BYTES(key);
+                    }
+                    return -1;
+                }
+            }
         }
-
-        AR_readOgg(&s2, 1, sizeof(s2), &of);
-
-        sample = (s1 + s2) >> 1;
-
-        audio_write_sample(sample);
-        audio_write_sample(sample);
     }
+
+    KeyboardPoll(kbdAddress);
+
+    for (int i = 0; i < MAX_KEYS; i++) {
+        u16 key = keydown[i];
+        if (key != 0) {
+            if (!KeyboadGetKeyIsDown(kbdAddress, key)) {
+                keydown[i] = 0;
+            }
+        }
+    }
+
+    return -1;
 }
+
+#else
+
+int kbd_getchar() {
+    return -1;
+}
+
+#endif // HAVE_CSUD
 
 void main() {
-    int led_status = LOW;
+    int led_status = LOW, x, y;
     struct timer_wait tw;
 
-    fb_init(384, 288);
+    fb_init(32 + 320 + 32, 32 + 200 + 32);
     fb_fill_rectangle(0, 0, fb_width - 1, fb_height - 1, BORDER_COLOR);
 
     initscr(40, 25);
@@ -147,23 +175,68 @@ void main() {
     mvaddstr(1, 9, "**** RASPBERRY-PI ****");
     mvaddstr(3, 7, "BARE-METAL SYSTEM TEMPLATE\r\n");
 
+#ifdef HAVE_CSUD
+    UsbInitialise();
+#endif
+
     pinMode(16, OUTPUT);
     register_timer(&tw, 250000);
-
-    of.filePtr = of.curPtr = (char *)audio_data;
-    of.fileSize = sizeof(audio_data);
-
-    audio_init();
-    //audio_play();
 
     addstr("\r\nREADY\r\n");
 
     while(1) {
-        audio_write_chunk();
+        int c = kbd_getchar();
+        if (c != -1) {
+            switch(c) {
+                case KEY_UP:
+                    getyx(y, x);
+                    move(y - 1, x);
+                    break;
+                case KEY_DOWN:
+                    getyx(y, x);
+                    move(y + 1, x);
+                    break;
+                case KEY_LEFT:
+                    getyx(y, x);
+                    x--;
+                    if (x < 0) {
+                        x = 39;
+                        y--;
+                    }
+                    move(y, x);
+                    break;
+                case KEY_RIGHT:
+                    getyx(y, x);
+                    x++;
+                    if (x >= 40) {
+                        x = 0;
+                        y++;
+                    }
+                    move(y, x);
+                    break;
+                case KEY_HOME:
+                    getyx(y, x);
+                    move(y, 0);
+                    break;
+                case KEY_PGUP:
+                    move(0, 0);
+                    break;
+                default:
+                    if (c > 0 && c < 0x7F) {
+                        addch(c);
+                        if (c == '\r')
+                            addch('\n');
+                    }
+                    break;
+            }
+        }
 
         if (compare_timer(&tw)) {
             led_status = led_status == LOW ? HIGH : LOW;
             digitalWrite(16, led_status);
+            toggle_cursor();
         }
+
+        flush_cache();
     }
 }

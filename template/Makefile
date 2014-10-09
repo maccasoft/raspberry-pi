@@ -1,12 +1,15 @@
 
 all: kernel.img
 
--include ../kernel/common.mk
+include ../kernel/common.mk
+include ../csud/pkgconfig.mk
 
 OBJS = \
 	../kernel/start.o \
 	../kernel/syscalls.o \
 	main.o
+
+# CFLAGS += -DHAVE_CSUD
 
 -include $(DEPDIR)/*.Po
 

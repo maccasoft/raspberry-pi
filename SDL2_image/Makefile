@@ -9,7 +9,7 @@ AR := $(TOOLCHAIN)-ar
 OBJCOPY := $(TOOLCHAIN)-objcopy
 
 DEPDIR := .deps
-DEFS = -D_REENTRANT -D__RASPBERRY__ -DLOAD_BMP -DLOAD_GIF -DLOAD_PNG -DHAVE_HIDDEN -DSDL_BYTEORDER=SDL_LIL_ENDIAN
+DEFS = -D_REENTRANT -D__RASPBERRY_PI__ -DLOAD_BMP -DLOAD_GIF -DLOAD_PNG -DHAVE_HIDDEN -DSDL_BYTEORDER=SDL_LIL_ENDIAN
 
 ASFLAGS = --warn -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=softfp
 CFLAGS = -O3 -I../SDL2/include -I../libpng -ffreestanding -marm -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=softfp $(DEFS)

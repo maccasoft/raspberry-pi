@@ -129,7 +129,7 @@ SDL_ChooseBlitFunc(Uint32 src_format, Uint32 dst_format, int flags,
                    SDL_BlitFuncEntry * entries)
 {
     int i, flagcheck;
-#ifdef __RASPBERRY__
+#ifdef __RASPBERRY_PI__
     static Uint32 features = SDL_CPU_ANY;
 #else
     static Uint32 features = 0xffffffff;

@@ -43,7 +43,7 @@
 #include "SDL_config_android.h"
 #elif defined(__PSP__)
 #include "SDL_config_psp.h"
-#elif defined(__RASPBERRY__)
+#elif defined(__RASPBERRY_PI__)
 #include "SDL_config_raspberry.h"
 #else
 /* This is a minimal configuration just to get SDL running on new platforms */

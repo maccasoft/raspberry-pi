@@ -24,7 +24,7 @@
 							<tool id="cdt.managedbuild.tool.gnu.cross.c.compiler.768521304" name="Cross GCC Compiler" superClass="cdt.managedbuild.tool.gnu.cross.c.compiler">
 								<option id="gnu.c.compiler.option.include.paths.1050830718" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false"/>
 								<option id="gnu.c.compiler.option.preprocessor.def.symbols.1571109654" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" useByScannerDiscovery="false" valueType="definedSymbols">
-									<listOptionValue builtIn="false" value="__RASPBERRY__"/>
+									<listOptionValue builtIn="false" value="__RASPBERRY_PI__"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.181982464" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>

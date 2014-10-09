@@ -6,11 +6,6 @@
 #include "SDL_image.h"
 #include "SDL_mixer.h"
 
-#include <usbd/usbd.h>
-#include <device/hid/keyboard.h>
-
-extern int poll_event(SDL_Event *keyp);
-
 extern unsigned int _binary_graphics_intro_png_start;
 extern unsigned int _binary_graphics_intro_png_end;
 extern unsigned int _binary_graphics_intromd_png_start;
@@ -68,7 +63,7 @@ void startscreen(SDL_Window *screen,uint *state,uint *grapset,uint *fullscreen) 
 		}
 
 		/* Check keyboard */
-		if ( poll_event(&keyp) ) {
+		if ( SDL_PollEvent(&keyp) ) {
 			if (keyp.type == SDL_KEYDOWN) { /* Key pressed */
 				if (keyp.key.keysym.sym == SDLK_c) { /* Change graphic set */
 					if (*grapset == 0)

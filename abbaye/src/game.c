@@ -16,8 +16,6 @@ extern unsigned int _binary_graphics_tiles_png_end;
 extern unsigned int _binary_graphics_fonts_png_start;
 extern unsigned int _binary_graphics_fonts_png_end;
 
-extern int poll_event(SDL_Event *keyp);
-
 void keybpause (uint *keyp);
 void music (uint room[],Mix_Music *bso[],uint *changeflag,int flag);
 void changescreen (struct hero *jean,uint room[],uint *changeflag);
@@ -369,7 +367,7 @@ void control (struct hero *jean,uint *keyp) {
     if (*keyp > 0)
         *keyp = 0;
 
-    if (poll_event(&event)) {
+    if (SDL_PollEvent(&event)) {
         if (event.type == SDL_KEYDOWN) {
             if (event.key.keysym.sym == SDLK_UP) {
                 if ((jean->push[0] == 0) && (jean->jump == 0) && (jean->ducking == 0))
@@ -715,7 +713,7 @@ void keybpause (uint *keyp) {
 
     SDL_Event event;
 
-    if (poll_event(&event)) {
+    if (SDL_PollEvent(&event)) {
         if (event.type == SDL_KEYDOWN) {
             if ((event.key.keysym.sym == SDLK_SPACE) || (event.key.keysym.sym == SDLK_LEFT) || (event.key.keysym.sym == SDLK_RIGHT))
                     *keyp = 1;

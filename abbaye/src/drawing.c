@@ -54,6 +54,7 @@ void blit(SDL_Surface *des, SDL_Surface *src, SDL_Rect *srcrect, SDL_Rect *desre
         info.dst_h += info.dst_y;
         if (info.dst_h <= 0)
             return;
+        info.src_y -= info.dst_y;
         info.dst_y = 0;
     }
     if ((info.dst_y + info.dst_h) >= des->h) {
@@ -109,6 +110,7 @@ void blit_colorkey(SDL_Surface *des, SDL_Surface *src, SDL_Rect *srcrect, SDL_Re
         info.dst_h += info.dst_y;
         if (info.dst_h <= 0)
             return;
+        info.src_y -= info.dst_y;
         info.dst_y = 0;
     }
     if ((info.dst_y + info.dst_h) >= des->h) {

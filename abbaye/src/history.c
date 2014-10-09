@@ -6,8 +6,6 @@
 #include "SDL_image.h"
 #include "SDL_mixer.h"
 
-extern int poll_event(SDL_Event *keyp);
-
 extern unsigned int _binary_graphics_tiles_png_start;
 extern unsigned int _binary_graphics_tiles_png_end;
 extern unsigned int _binary_graphics_history_png_start;

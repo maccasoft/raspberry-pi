@@ -9,6 +9,7 @@ all:
 	make -C SDL2
 	make -C SDL2_image
 	make -C SDL2_mixer
+	make -C template
 	make -C abbaye
 
 clean:
@@ -21,4 +22,5 @@ clean:
 	make -C SDL2 -k clean
 	make -C SDL2_image -k clean
 	make -C SDL2_mixer -k clean
+	make -C template -k clean
 	make -C abbaye -k clean

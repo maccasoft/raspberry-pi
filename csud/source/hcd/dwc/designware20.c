@@ -27,9 +27,9 @@ volatile struct PowerReg *PowerPhysical, *Power = NULL;
 bool PhyInitialised = false;
 u8* databuffer = NULL;
 
-void DwcLoad() 
+void DwcLoad()
 {
-	LOG_DEBUG("CSUD: DesignWare Hi-Speed USB 2.0 On-The-Go (HS OTG) Controller driver version 0.1\n"); 
+	LOG_DEBUG("CSUD: DesignWare Hi-Speed USB 2.0 On-The-Go (HS OTG) Controller driver version 0.1\n");
 }
 
 void WriteThroughReg(volatile const void* reg) {
@@ -125,15 +125,15 @@ void SetReg(volatile const void* reg) {
 }
 
 
-/** 
+/**
 	\brief Triggers the core soft reset.
 
-	Raises the core soft reset signal high, and then waits for the core to 
+	Raises the core soft reset signal high, and then waits for the core to
 	signal that it is ready again.
 */
 Result HcdReset() {
 	u32 count = 0;
-	
+
 	do {
 		ReadBackReg(&Core->Reset);
 		if (count++ >= 0x100000) {
@@ -145,7 +145,7 @@ Result HcdReset() {
 	Core->Reset.CoreSoft = true;
 	WriteThroughReg(&Core->Reset);
 	count = 0;
-	
+
 	do {
 		ReadBackReg(&Core->Reset);
 		if (count++ >= 0x100000) {
@@ -157,15 +157,15 @@ Result HcdReset() {
 	return OK;
 }
 
-/** 
+/**
 	\brief Triggers the fifo flush for a given fifo.
 
-	Raises the core fifo flush signal high, and then waits for the core to 
+	Raises the core fifo flush signal high, and then waits for the core to
 	signal that it is ready again.
 */
 Result HcdTransmitFifoFlush(enum CoreFifoFlush fifo) {
 	u32 count = 0;
-	
+
 	if (fifo == FlushAll)
 		LOG_DEBUG("HCD: TXFlush(All)\n");
 	else if (fifo == FlushNonPeriodic)
@@ -178,7 +178,7 @@ Result HcdTransmitFifoFlush(enum CoreFifoFlush fifo) {
 	Core->Reset.TransmitFifoFlush = true;
 	WriteThroughReg(&Core->Reset);
 	count = 0;
-	
+
 	do {
 		ReadBackReg(&Core->Reset);
 		if (count++ >= 0x100000) {
@@ -190,22 +190,22 @@ Result HcdTransmitFifoFlush(enum CoreFifoFlush fifo) {
 	return OK;
 }
 
-/** 
+/**
 	\brief Triggers the receive fifo flush for a given fifo.
 
-	Raises the core receive fifo flush signal high, and then waits for the core to 
+	Raises the core receive fifo flush signal high, and then waits for the core to
 	signal that it is ready again.
 */
 Result HcdReceiveFifoFlush() {
 	u32 count = 0;
-	
+
 	LOG_DEBUG("HCD: RXFlush(All)\n");
-	
+
 	ClearReg(&Core->Reset);
 	Core->Reset.ReceiveFifoFlush = true;
 	WriteThroughReg(&Core->Reset);
 	count = 0;
-	
+
 	do {
 		ReadBackReg(&Core->Reset);
 		if (count++ >= 0x100000) {
@@ -250,7 +250,7 @@ Result HcdPrepareChannel(struct UsbDevice *device, u8 channel,
 	if (pipe->Speed != High) {
 		Host->Channel[channel].SplitControl.SplitEnable = true;
 		Host->Channel[channel].SplitControl.HubAddress = device->Parent->Number;
-		Host->Channel[channel].SplitControl.PortAddress = device->PortNumber;			
+		Host->Channel[channel].SplitControl.PortAddress = device->PortNumber;
 	}
 	WriteThroughReg(&Host->Channel[channel].SplitControl);
 
@@ -264,11 +264,15 @@ Result HcdPrepareChannel(struct UsbDevice *device, u8 channel,
 		Host->Channel[channel].TransferSize.PacketCount = 1;
 	Host->Channel[channel].TransferSize.PacketId = type;
 	WriteThroughReg(&Host->Channel[channel].TransferSize);
-	
+
 	return OK;
 }
 
-void HcdTransmitChannel(u8 channel, void* buffer) {	
+void HcdTransmitChannel(u8 channel, void* buffer) {
+    int cr = 0;
+
+    __asm volatile ("mcr p15, 0, %0, c7, c14, 0" :: "r" (cr));
+
 	ReadBackReg(&Host->Channel[channel].SplitControl);
 	Host->Channel[channel].SplitControl.CompleteSplit = false;
 	WriteThroughReg(&Host->Channel[channel].SplitControl);
@@ -282,7 +286,7 @@ void HcdTransmitChannel(u8 channel, void* buffer) {
 	Host->Channel[channel].Characteristic.PacketsPerFrame = 1;
 	Host->Channel[channel].Characteristic.Enable = true;
 	Host->Channel[channel].Characteristic.Disable = false;
-	WriteThroughReg(&Host->Channel[channel].Characteristic);	
+	WriteThroughReg(&Host->Channel[channel].Characteristic);
 }
 
 Result HcdChannelInterruptToError(struct UsbDevice *device, struct ChannelInterrupts interrupts, bool isComplete) {
@@ -340,18 +344,18 @@ Result HcdChannelInterruptToError(struct UsbDevice *device, struct ChannelInterr
 	return result;
 }
 
-Result HcdChannelSendWaitOne(struct UsbDevice *device, 
+Result HcdChannelSendWaitOne(struct UsbDevice *device,
 	struct UsbPipeAddress *pipe, u8 channel, void* buffer, u32 bufferLength, u32 bufferOffset,
 	struct UsbDeviceRequest *request) {
 	Result result;
 	u32 timeout, tries, globalTries, actualTries;
-	
+
 	for (globalTries = 0, actualTries = 0; globalTries < 3 && actualTries < 10; globalTries++, actualTries++) {
 		SetReg(&Host->Channel[channel].Interrupt);
 		WriteThroughReg(&Host->Channel[channel].Interrupt);
 		ReadBackReg(&Host->Channel[channel].TransferSize);
 		ReadBackReg(&Host->Channel[channel].SplitControl);
-						
+
 		HcdTransmitChannel(channel, (u8*)buffer + bufferOffset);
 
 		timeout = 0;
@@ -366,7 +370,7 @@ Result HcdChannelSendWaitOne(struct UsbDevice *device,
 			else break;
 		} while (true);
 		ReadBackReg(&Host->Channel[channel].TransferSize);
-		
+
 		if (Host->Channel[channel].SplitControl.SplitEnable) {
 			if (Host->Channel[channel].Interrupt.Acknowledgement) {
 				for (tries = 0; tries < 3; tries++) {
@@ -376,7 +380,7 @@ Result HcdChannelSendWaitOne(struct UsbDevice *device,
 					ReadBackReg(&Host->Channel[channel].SplitControl);
 					Host->Channel[channel].SplitControl.CompleteSplit = true;
 					WriteThroughReg(&Host->Channel[channel].SplitControl);
-					
+
 					Host->Channel[channel].Characteristic.Enable = true;
 					Host->Channel[channel].Characteristic.Disable = false;
 					WriteThroughReg(&Host->Channel[channel].Characteristic);
@@ -406,9 +410,9 @@ Result HcdChannelSendWaitOne(struct UsbDevice *device,
 					MicroDelay(25000);
 					continue;
 				}
-	
+
 				if ((result = HcdChannelInterruptToError(device, Host->Channel[channel].Interrupt, false)) != OK) {
-					LOG_DEBUGF("HCD: Control message to %#x: %02x%02x%02x%02x %02x%02x%02x%02x.\n", *(u32*)pipe, 
+					LOG_DEBUGF("HCD: Control message to %#x: %02x%02x%02x%02x %02x%02x%02x%02x.\n", *(u32*)pipe,
 						((u8*)request)[0], ((u8*)request)[1], ((u8*)request)[2], ((u8*)request)[3],
 						((u8*)request)[4], ((u8*)request)[5], ((u8*)request)[6], ((u8*)request)[7]);
 					LOGF("HCD: Request split completion to %s failed.\n", UsbGetDescription(device));
@@ -421,10 +425,10 @@ Result HcdChannelSendWaitOne(struct UsbDevice *device,
 			} else if (Host->Channel[channel].Interrupt.TransactionError) {
 				MicroDelay(25000);
 				continue;
-			}				
-		} else {				
+			}
+		} else {
 			if ((result = HcdChannelInterruptToError(device, Host->Channel[channel].Interrupt, !Host->Channel[channel].SplitControl.SplitEnable)) != OK) {
-				LOG_DEBUGF("HCD: Control message to %#x: %02x%02x%02x%02x %02x%02x%02x%02x.\n", *(u32*)pipe, 
+				LOG_DEBUGF("HCD: Control message to %#x: %02x%02x%02x%02x %02x%02x%02x%02x.\n", *(u32*)pipe,
 					((u8*)request)[0], ((u8*)request)[1], ((u8*)request)[2], ((u8*)request)[3],
 					((u8*)request)[4], ((u8*)request)[5], ((u8*)request)[6], ((u8*)request)[7]);
 				LOGF("HCD: Request to %s failed.\n", UsbGetDescription(device));
@@ -438,7 +442,7 @@ Result HcdChannelSendWaitOne(struct UsbDevice *device,
 	if (globalTries == 3 || actualTries == 10) {
 		LOGF("HCD: Request to %s has failed 3 times.\n", UsbGetDescription(device));
 		if ((result = HcdChannelInterruptToError(device, Host->Channel[channel].Interrupt, !Host->Channel[channel].SplitControl.SplitEnable)) != OK) {
-			LOG_DEBUGF("HCD: Control message to %#x: %02x%02x%02x%02x %02x%02x%02x%02x.\n", *(u32*)pipe, 
+			LOG_DEBUGF("HCD: Control message to %#x: %02x%02x%02x%02x %02x%02x%02x%02x.\n", *(u32*)pipe,
 				((u8*)request)[0], ((u8*)request)[1], ((u8*)request)[2], ((u8*)request)[3],
 				((u8*)request)[4], ((u8*)request)[5], ((u8*)request)[6], ((u8*)request)[7]);
 			LOGF("HCD: Request to %s failed.\n", UsbGetDescription(device));
@@ -451,25 +455,25 @@ Result HcdChannelSendWaitOne(struct UsbDevice *device,
 	return OK;
 }
 
-Result HcdChannelSendWait(struct UsbDevice *device, 
-	struct UsbPipeAddress *pipe, u8 channel, void* buffer, u32 bufferLength, 
+Result HcdChannelSendWait(struct UsbDevice *device,
+	struct UsbPipeAddress *pipe, u8 channel, void* buffer, u32 bufferLength,
 	struct UsbDeviceRequest *request, enum PacketId packetId) {
 	Result result;
 	u32 packets, transfer, tries;
-	
+
 	tries = 0;
 retry:
 	if (tries++ == 3) {
 		LOGF("HCD: Failed to send to %s after 3 attempts.\n", UsbGetDescription(device));
 		return ErrorTimeout;
-	} 
+	}
 
-	if ((result = HcdPrepareChannel(device, channel, bufferLength, packetId, pipe)) != OK) {		
+	if ((result = HcdPrepareChannel(device, channel, bufferLength, packetId, pipe)) != OK) {
 		device->Error = ConnectionError;
 		LOGF("HCD: Could not prepare data channel to %s.\n", UsbGetDescription(device));
 		return result;
 	}
-		
+
 	transfer = 0;
 	do {
 		packets = Host->Channel[channel].TransferSize.PacketCount;
@@ -477,8 +481,8 @@ retry:
 			if (result == ErrorRetry) goto retry;
 			return result;
 		}
-		
-		ReadBackReg(&Host->Channel[channel].TransferSize);		
+
+		ReadBackReg(&Host->Channel[channel].TransferSize);
 		transfer = bufferLength - Host->Channel[channel].TransferSize.TransferSize;
 		if (packets == Host->Channel[channel].TransferSize.PacketCount) break;
 	} while (Host->Channel[channel].TransferSize.PacketCount > 0);
@@ -496,7 +500,7 @@ retry:
 	return OK;
 }
 
-Result HcdSumbitControlMessage(struct UsbDevice *device, 
+Result HcdSumbitControlMessage(struct UsbDevice *device,
 	struct UsbPipeAddress pipe, void* buffer, u32 bufferLength,
 	struct UsbDeviceRequest *request) {
 	Result result;
@@ -507,7 +511,7 @@ Result HcdSumbitControlMessage(struct UsbDevice *device,
 
 	device->Error = Processing;
 	device->LastTransfer = 0;
-			
+
 	// Setup
 	tempPipe.Speed = pipe.Speed;
 	tempPipe.Device = pipe.Device;
@@ -515,8 +519,8 @@ Result HcdSumbitControlMessage(struct UsbDevice *device,
 	tempPipe.MaxSize = pipe.MaxSize;
 	tempPipe.Type = Control;
 	tempPipe.Direction = Out;
-	
-	if ((result = HcdChannelSendWait(device, &tempPipe, 0, request, 8, request, Setup)) != OK) {		
+
+	if ((result = HcdChannelSendWait(device, &tempPipe, 0, request, 8, request, Setup)) != OK) {
 		LOGF("HCD: Could not send SETUP to %s.\n", UsbGetDescription(device));
 		return OK;
 	}
@@ -532,19 +536,19 @@ Result HcdSumbitControlMessage(struct UsbDevice *device,
 		tempPipe.MaxSize = pipe.MaxSize;
 		tempPipe.Type = Control;
 		tempPipe.Direction = pipe.Direction;
-		
-		if ((result = HcdChannelSendWait(device, &tempPipe, 0, databuffer, bufferLength, request, Data1)) != OK) {		
+
+		if ((result = HcdChannelSendWait(device, &tempPipe, 0, databuffer, bufferLength, request, Data1)) != OK) {
 			LOGF("HCD: Could not send DATA to %s.\n", UsbGetDescription(device));
 			return OK;
 		}
-						
+
 		ReadBackReg(&Host->Channel[0].TransferSize);
 		if (pipe.Direction == In) {
 			if (Host->Channel[0].TransferSize.TransferSize <= bufferLength)
 				device->LastTransfer = bufferLength - Host->Channel[0].TransferSize.TransferSize;
 			else{
 				LOG_DEBUGF("HCD: Weird transfer.. %d/%d bytes received.\n", Host->Channel[0].TransferSize.TransferSize, bufferLength);
-				LOG_DEBUGF("HCD: Message %02x%02x%02x%02x %02x%02x%02x%02x %02x%02x%02x%02x %02x%02x%02x%02x ...\n", 
+				LOG_DEBUGF("HCD: Message %02x%02x%02x%02x %02x%02x%02x%02x %02x%02x%02x%02x %02x%02x%02x%02x ...\n",
 					((u8*)databuffer)[0x0],((u8*)databuffer)[0x1],((u8*)databuffer)[0x2],((u8*)databuffer)[0x3],
 					((u8*)databuffer)[0x4],((u8*)databuffer)[0x5],((u8*)databuffer)[0x6],((u8*)databuffer)[0x7],
 					((u8*)databuffer)[0x8],((u8*)databuffer)[0x9],((u8*)databuffer)[0xa],((u8*)databuffer)[0xb],
@@ -565,8 +569,8 @@ Result HcdSumbitControlMessage(struct UsbDevice *device,
 	tempPipe.MaxSize = pipe.MaxSize;
 	tempPipe.Type = Control;
 	tempPipe.Direction = ((bufferLength == 0) || pipe.Direction == Out) ? In : Out;
-	
-	if ((result = HcdChannelSendWait(device, &tempPipe, 0, databuffer, 0, request, Data1)) != OK) {		
+
+	if ((result = HcdChannelSendWait(device, &tempPipe, 0, databuffer, 0, request, Data1)) != OK) {
 		LOGF("HCD: Could not send STATUS to %s.\n", UsbGetDescription(device));
 		return OK;
 	}
@@ -579,12 +583,12 @@ Result HcdSumbitControlMessage(struct UsbDevice *device,
 
 	return OK;
 }
-	
-Result HcdInitialise() {	
+
+Result HcdInitialise() {
 	volatile Result result;
 
 	if (sizeof(struct CoreGlobalRegs) != 0x400 || sizeof(struct HostGlobalRegs) != 0x400 || sizeof(struct PowerReg) != 0x4) {
-		LOGF("HCD: Incorrectly compiled driver. HostGlobalRegs: %#x (0x400), CoreGlobalRegs: %#x (0x400), PowerReg: %#x (0x4).\n", 
+		LOGF("HCD: Incorrectly compiled driver. HostGlobalRegs: %#x (0x400), CoreGlobalRegs: %#x (0x400), PowerReg: %#x (0x4).\n",
 			sizeof(struct HostGlobalRegs), sizeof(struct CoreGlobalRegs), sizeof(struct PowerReg));
 		return ErrorCompiler; // Correct packing settings are required.
 	}
@@ -594,18 +598,18 @@ Result HcdInitialise() {
 
 	HostPhysical = MemoryReserve(sizeof(struct HostGlobalRegs), (void*)((u8*)HCD_DESIGNWARE_BASE + 0x400));
 	Host = MemoryAllocate(sizeof(struct HostGlobalRegs));
-	
+
 	PowerPhysical = MemoryReserve(sizeof(struct PowerReg), (void*)((u8*)HCD_DESIGNWARE_BASE + 0xe00));
 	Power = MemoryAllocate(sizeof(struct PowerReg));
 
 #ifdef BROADCOM_2835
 	ReadBackReg(&Core->VendorId);
 	ReadBackReg(&Core->UserId);
-	if ((Core->VendorId & 0xfffff000) != 0x4f542000) { // 'OT'2 
+	if ((Core->VendorId & 0xfffff000) != 0x4f542000) { // 'OT'2
 		LOGF("HCD: Hardware: %c%c%x.%x%x%x (BCM%.5x). Driver incompatible. Expected OT2.xxx (BCM2708x).\n",
 			(Core->VendorId >> 24) & 0xff, (Core->VendorId >> 16) & 0xff,
 			(Core->VendorId >> 12) & 0xf, (Core->VendorId >> 8) & 0xf,
-			(Core->VendorId >> 4) & 0xf, (Core->VendorId >> 0) & 0xf, 
+			(Core->VendorId >> 4) & 0xf, (Core->VendorId >> 0) & 0xf,
 			(Core->UserId >> 12) & 0xFFFFF);
 		result = ErrorIncompatible;
 		goto deallocate;
@@ -614,11 +618,11 @@ Result HcdInitialise() {
 		LOGF("HCD: Hardware: %c%c%x.%x%x%x (BCM%.5x).\n",
 			(Core->VendorId >> 24) & 0xff, (Core->VendorId >> 16) & 0xff,
 			(Core->VendorId >> 12) & 0xf, (Core->VendorId >> 8) & 0xf,
-			(Core->VendorId >> 4) & 0xf, (Core->VendorId >> 0) & 0xf, 
+			(Core->VendorId >> 4) & 0xf, (Core->VendorId >> 0) & 0xf,
 			(Core->UserId >> 12) & 0xFFFFF);
 	}
 #else
-	if ((Core->VendorId & 0xfffff000) != 0x4f542000) { // 'OT'2 
+	if ((Core->VendorId & 0xfffff000) != 0x4f542000) { // 'OT'2
 		LOGF("HCD: Hardware: %c%c%x.%x%x%x. Driver incompatible. Expected OT2.xxx.\n",
 			(Core->VendorId >> 24) & 0xff, (Core->VendorId >> 16) & 0xff,
 			(Core->VendorId >> 12) & 0xf, (Core->VendorId >> 8) & 0xf,
@@ -648,21 +652,21 @@ Result HcdInitialise() {
 	LOG_DEBUGF("HCD: Hardware configuration: %08x %08x %08x %08x\n", *(u32*)&Core->Hardware, *((u32*)&Core->Hardware + 1), *((u32*)&Core->Hardware + 2), *((u32*)&Core->Hardware + 3));
 	ReadBackReg(&Host->Config);
 	LOG_DEBUGF("HCD: Host configuration: %08x\n", *(u32*)&Host->Config);
-	
+
 	LOG_DEBUG("HCD: Disabling interrupts.\n");
 	ReadBackReg(&Core->Ahb);
 	Core->Ahb.InterruptEnable = false;
 	ClearReg(&Core->InterruptMask);
 	WriteThroughReg(&Core->InterruptMask);
 	WriteThroughReg(&Core->Ahb);
-	
+
 	LOG_DEBUG("HCD: Powering USB on.\n");
 	if ((result = PowerOnUsb()) != OK) {
 		LOG("HCD: Failed to power on USB Host Controller.\n");
 		result = ErrorIncompatible;
 		goto deallocate;
 	}
-	
+
 	LOG_DEBUG("HCD: Load completed.\n");
 
 	return OK;
@@ -673,7 +677,7 @@ deallocate:
 	return result;
 }
 
-Result HcdStart() {	
+Result HcdStart() {
 	Result result;
 	u32 timeout;
 
@@ -690,12 +694,12 @@ Result HcdStart() {
 	Core->Usb.UlpiDriveExternalVbus = 0;
 	Core->Usb.TsDlinePulseEnable = 0;
 	WriteThroughReg(&Core->Usb);
-	
+
 	LOG_DEBUG("HCD: Master reset.\n");
 	if ((result = HcdReset()) != OK) {
 		goto deallocate;
 	}
-	
+
 	if (!PhyInitialised) {
 		LOG_DEBUG("HCD: One time phy initialisation.\n");
 		PhyInitialised = true;
@@ -726,7 +730,7 @@ Result HcdStart() {
 	Core->Ahb.DmaEnable = true;
 	Core->Ahb.DmaRemainderMode = Incremental;
 	WriteThroughReg(&Core->Ahb);
-	
+
 	ReadBackReg(&Core->Usb);
 	switch (Core->Hardware.OperatingMode) {
 	case HNP_SRP_CAPABLE:
@@ -771,9 +775,9 @@ Result HcdStart() {
 	ReadBackReg(&Host->Config);
 	Host->Config.FslsOnly = true;
 	WriteThroughReg(&Host->Config);
-		
+
 	ReadBackReg(&Host->Config);
-	if (Host->Config.EnableDmaDescriptor == 
+	if (Host->Config.EnableDmaDescriptor ==
 		Core->Hardware.DmaDescription &&
 		(Core->VendorId & 0xfff) >= 0x90a) {
 		LOG_DEBUG("HCD: DMA descriptor: enabled.\n");
@@ -781,7 +785,7 @@ Result HcdStart() {
 		LOG_DEBUG("HCD: DMA descriptor: disabled.\n");
 	}
 	WriteThroughReg(&Host->Config);
-		
+
 	LOG_DEBUGF("HCD: FIFO configuration: Total=%#x Rx=%#x NPTx=%#x PTx=%#x.\n", ReceiveFifoSize + NonPeriodicFifoSize + PeriodicFifoSize, ReceiveFifoSize, NonPeriodicFifoSize, PeriodicFifoSize);
 	ReadBackReg(&Core->Receive.Size);
 	Core->Receive.Size = ReceiveFifoSize;
@@ -802,7 +806,7 @@ Result HcdStart() {
 	Core->OtgControl.HostSetHnpEnable = true;
 	WriteThroughReg(&Core->OtgControl);
 
-	if ((result = HcdTransmitFifoFlush(FlushAll)) != OK) 
+	if ((result = HcdTransmitFifoFlush(FlushAll)) != OK)
 		goto deallocate;
 	if ((result = HcdReceiveFifoFlush()) != OK)
 		goto deallocate;
@@ -841,7 +845,7 @@ Result HcdStart() {
 		Host->Port.Power = true;
 		WriteThroughRegMask(&Host->Port, 0x1000);
 	}
-	
+
 	LOG_DEBUG("HCD: Reset port.\n");
 	ReadBackReg(&Host->Port);
 	Host->Port.Reset = true;
@@ -850,9 +854,9 @@ Result HcdStart() {
 	Host->Port.Reset = false;
 	WriteThroughRegMask(&Host->Port, 0x100);
 	ReadBackReg(&Host->Port);
-	
+
 	LOG_DEBUG("HCD: Successfully started.\n");
-		
+
 	return OK;
 deallocate:
 	MemoryDeallocate(databuffer);

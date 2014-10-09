@@ -5,7 +5,7 @@
 *	A light weight implementation of the USB protocol stack fit for a simple
 *	driver.
 *
-*	device/hid/hid.h contains definitions relating to generic human interface 
+*	device/hid/hid.h contains definitions relating to generic human interface
 *	devices. Information about the hid reports is in device/hid/report.h.
 ******************************************************************************/
 
@@ -28,7 +28,7 @@ extern "C"
 struct HidDescriptor {
 	u8 DescriptorLength; // +0x0
 	enum DescriptorType DescriptorType : 8; // +0x1
-	u16 HidVersion; // (bcd version) +0x2 
+	u16 HidVersion; // (bcd version) +0x2
 	enum HidCountry {
 		CountryNotSupported = 0,
 		Arabic = 1,
@@ -88,11 +88,11 @@ enum HidReportType {
 /** The DeviceDriver field in UsbDriverDataHeader for hid devices. */
 #define DeviceDriverHid 0x48494430
 
-/** 
+/**
 	\brief Hid specific data.
 
-	The contents of the driver data field for hid devices. Chains to 
-	allow a stacked driver. 
+	The contents of the driver data field for hid devices. Chains to
+	allow a stacked driver.
 */
 struct HidDevice {
 	struct UsbDriverDataHeader Header;
@@ -119,24 +119,24 @@ extern Result (*HidUsageAttach[HidUsageAttachCount])(struct UsbDevice *device, u
 	\brief Retrieves a hid report.
 
 	Performs a hid get report request as defined in  in the USB HID 1.11 manual
-	in 7.2.1. 
+	in 7.2.1.
 */
-Result HidGetReport(struct UsbDevice *device, enum HidReportType reportType, 
+Result HidGetReport(struct UsbDevice *device, enum HidReportType reportType,
 	u8 reportId, u8 interface, u32 bufferLength, void* buffer);
 
 /**
 	\brief Sends a hid report.
 
 	Performs a hid set report request as defined in  in the USB HID 1.11 manual
-	in 7.2.2. 
+	in 7.2.2.
 */
-Result HidSetReport(struct UsbDevice *device, enum HidReportType reportType, 
+Result HidSetReport(struct UsbDevice *device, enum HidReportType reportType,
 	u8 reportId, u8 interface, u32 bufferLength, void* buffer);
 
 /**
 	\brief Updates the device with the values of a report.
 
-	Writes back the current values of a report in memory to the device. 
+	Writes back the current values of a report in memory to the device.
 	Implemented using HidSetReport, not interrupts.
 */
 Result HidWriteDevice(struct UsbDevice *device, u8 report);
@@ -161,4 +161,4 @@ Result HidAttach(struct UsbDevice *device, u32 interfaceNumber);
 }
 #endif
 
-#endif HID_H_
+#endif // HID_H_

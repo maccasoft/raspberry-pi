@@ -31,6 +31,7 @@ SECTIONS
         *(.ARM.exidx* .gnu.linkonce.armexidx.*)
     } 
     
+    . = ALIGN(8);
     .stack : {
         __stack_start__ = ABSOLUTE(.);
 
@@ -43,6 +44,8 @@ SECTIONS
         __stack_end__ = ABSOLUTE(.);
     }
 
-    __heap_start = ABSOLUTE(.);
-    __heap_end = 0x1C000000;
+    .heap : {
+        __heap_start = ABSOLUTE(.);
+        __heap_end = 0x1C000000;
+    }
 }

@@ -237,20 +237,24 @@ pixel_t * fb_flip() {
     unsigned int mb_addr = 0x40007000;      // 0x7000 in L2 cache coherent mode
     volatile unsigned int *mailbuffer = (unsigned int *) mb_addr;
 
-    fb_buffer = fb_buffer == 0 ? 1 : 0;
-    fb_addr = fb_buffer == 0 ? fb_buffer_addr[1] : fb_buffer_addr[0];
+    flush_cache();
 
-    mailbuffer[0] = 8 * 4;
-    mailbuffer[1] = 0;
-    mailbuffer[2] = TAG_SET_VIRT_OFFSET;
-    mailbuffer[3] = 8;
-    mailbuffer[4] = 8;
-    mailbuffer[5] = 0;
-    mailbuffer[6] = fb_buffer * fb_height;
-    mailbuffer[7] = 0;
-    mbox_write(MAIL_TAGS, mb_addr);
+    if (fb_addr != fb_buffer_addr[fb_buffer]) {
+        fb_buffer = fb_buffer == 0 ? 1 : 0;
+        fb_addr = fb_buffer == 0 ? fb_buffer_addr[1] : fb_buffer_addr[0];
 
-    mbox_read(MAIL_TAGS);
+        mailbuffer[0] = 8 * 4;
+        mailbuffer[1] = 0;
+        mailbuffer[2] = TAG_SET_VIRT_OFFSET;
+        mailbuffer[3] = 8;
+        mailbuffer[4] = 8;
+        mailbuffer[5] = 0;
+        mailbuffer[6] = fb_buffer * fb_height;
+        mailbuffer[7] = 0;
+        mbox_write(MAIL_TAGS, mb_addr);
+
+        mbox_read(MAIL_TAGS);
+    }
 
     return (pixel_t *) fb_addr;
 }

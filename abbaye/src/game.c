@@ -7,8 +7,6 @@
 #include "SDL_image.h"
 #include "SDL_mixer.h"
 
-#include "console.h"
-
 #include "structs.h"
 
 extern unsigned int _binary_graphics_tiles_png_start;

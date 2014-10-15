@@ -26,7 +26,7 @@
 #include "../SDL_audio_c.h"
 #include "SDL_raspberryaudio.h"
 
-#include "platform.h"
+#include "../../core/raspberry/SDL_raspberry.h"
 
 #define MAX_SAMPLES      8192
 

@@ -79,7 +79,11 @@ SDL_RenderDriver SW_RenderDriver = {
     SW_CreateRenderer,
     {
      "software",
+#ifdef __RASPBERRY_PI__
+     SDL_RENDERER_SOFTWARE | SDL_RENDERER_TARGETTEXTURE | SDL_RENDERER_PRESENTVSYNC,
+#else
      SDL_RENDERER_SOFTWARE | SDL_RENDERER_TARGETTEXTURE,
+#endif
      8,
      {
       SDL_PIXELFORMAT_RGB555,

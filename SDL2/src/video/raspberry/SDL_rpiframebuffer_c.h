@@ -20,8 +20,8 @@
 */
 #include "../../SDL_internal.h"
 
-extern int SDL_RASPBERRY_CreateWindowFramebuffer(_THIS, SDL_Window * window, Uint32 * format, void ** pixels, int *pitch);
-extern int SDL_RASPBERRY_UpdateWindowFramebuffer(_THIS, SDL_Window * window, const SDL_Rect * rects, int numrects);
-extern void SDL_RASPBERRY_DestroyWindowFramebuffer(_THIS, SDL_Window * window);
+extern int RASPBERRY_CreateWindowFramebuffer(_THIS, SDL_Window * window, Uint32 * format, void ** pixels, int *pitch);
+extern int RASPBERRY_UpdateWindowFramebuffer(_THIS, SDL_Window * window, const SDL_Rect * rects, int numrects);
+extern void RASPBERRY_DestroyWindowFramebuffer(_THIS, SDL_Window * window);
 
 /* vi: set ts=4 sw=4 expandtab: */

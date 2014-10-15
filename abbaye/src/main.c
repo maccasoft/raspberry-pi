@@ -13,7 +13,6 @@
 #include "SDL_mixer.h"
 
 #include "platform.h"
-#include "fb.h"
 
 extern void sdl_audio_dma_irq();
 
@@ -28,8 +27,6 @@ extern "C" {
 #endif
 
 __attribute__ ((interrupt ("IRQ"))) void interrupt_irq() {
-    if ((IRQ->irqBasicPending & INTERRUPT_ARM_TIMER) != 0)
-        ;
     if ((IRQ->irq1Pending & INTERRUPT_DMA0) != 0)
         sdl_audio_dma_irq();
 }
@@ -44,14 +41,10 @@ void main () {
 	uint grapset = 1; /* 0-8bits, 1-16bits */
 	uint fullscreen = 0; /* 0-Windowed,1-Fullscreen */
 
-	/* Initialize framebuffer */
-    fb_init(16+256+16, 16+192+16);
-    fb_begin_doublebuffer();
-
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS);
 
 	/* Creating window */
-	SDL_Window *screen = SDL_CreateWindow("Abbaye des Morts v2.0",16,16,256,192,SDL_WINDOWEVENT_SHOWN);
+	SDL_Window *screen = SDL_CreateWindow("Abbaye des Morts v2.0",0,0,256,192,SDL_WINDOW_FULLSCREEN);
 
 	/* Init audio */
 	Mix_OpenAudio (22050,MIX_DEFAULT_FORMAT,2,4096);

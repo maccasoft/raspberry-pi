@@ -22,19 +22,9 @@
 
 #if SDL_VIDEO_DRIVER_RASPBERRY
 
-/* Dummy SDL video driver implementation; this is just enough to make an
- *  SDL-based application THINK it's got a working video driver, for
- *  applications that call SDL_Init(SDL_INIT_VIDEO) when they don't need it,
- *  and also for use as a collection of stubs when porting SDL to a new
- *  platform for which you haven't yet written a valid video driver.
+/* RaspberryPi Baremetal SDL video driver implementation.
  *
- * This is also a great way to determine bottlenecks: if you think that SDL
- *  is a performance problem for a given platform, enable this driver, and
- *  then see if your application runs faster without video overhead.
- *
- * Initial work by Ryan C. Gordon (icculus@icculus.org). A good portion
- *  of this was cut-and-pasted from Stephane Peter's work in the AAlib
- *  SDL video driver.  Renamed to "DUMMY" by Sam Lantinga.
+ * Initial work by Marco Maccaferri (macca@maccasoft.com).
  */
 
 #include "SDL_video.h"
@@ -47,7 +37,7 @@
 #include "SDL_rpievents_c.h"
 #include "SDL_rpiframebuffer_c.h"
 
-#include "../../../../kernel/fb.h"
+#include "../../core/raspberry/SDL_raspberry.h"
 
 #ifdef HAVE_CSUD
 #include "usbd/usbd.h"
@@ -56,16 +46,47 @@
 
 #define RASPBERRYVID_DRIVER_NAME "raspberry"
 
-extern uint32_t fb_width;
-extern uint32_t fb_height;
-
 /* Initialization/Query functions */
 static int RASPBERRY_VideoInit(_THIS);
 static int RASPBERRY_SetDisplayMode(_THIS, SDL_VideoDisplay * display, SDL_DisplayMode * mode);
 static void RASPBERRY_VideoQuit(_THIS);
-static int SDL_RASPBERRY_GetDisplayBounds (_THIS, SDL_VideoDisplay * display, SDL_Rect * rect);
+static int RASPBERRY_GetDisplayBounds (_THIS, SDL_VideoDisplay * display, SDL_Rect * rect);
 
-/* DUMMY driver bootstrap functions */
+static unsigned int phys_width;
+static unsigned int phys_height;
+
+static int
+RASPBERRY_CreateWindow(_THIS, SDL_Window * window)
+{
+    /* Adjust the window data to match the screen */
+    window->x = 0;
+    window->y = 0;
+    if (window->w > 1 && window->h > 1)
+    {
+        SDL_DisplayMode mode;
+        SDL_zero(mode);
+        mode.format = SDL_PIXELFORMAT_ABGR8888;
+        mode.w = phys_width = window->w;
+        mode.h = phys_height = window->h;
+        mode.refresh_rate = 60;
+        mode.driverdata = NULL;
+        SDL_AddDisplayMode(&_this->displays[0], &mode);
+    }
+    window->w = phys_width;
+    window->h = phys_height;
+
+    window->flags &= ~SDL_WINDOW_RESIZABLE;     /* window is NEVER resizeable */
+    window->flags |= SDL_WINDOW_FULLSCREEN;     /* window is always fullscreen */
+    window->flags &= ~SDL_WINDOW_HIDDEN;
+    window->flags |= SDL_WINDOW_SHOWN;          /* only one window */
+    window->flags |= SDL_WINDOW_INPUT_FOCUS;    /* always has input focus */
+
+    /* One window, it always has focus */
+    SDL_SetMouseFocus(window);
+    SDL_SetKeyboardFocus(window);
+}
+
+/* driver bootstrap functions */
 
 static int
 RASPBERRY_Available(void)
@@ -97,10 +118,11 @@ RASPBERRY_CreateDevice(int devindex)
     device->VideoQuit = RASPBERRY_VideoQuit;
     device->SetDisplayMode = RASPBERRY_SetDisplayMode;
     device->PumpEvents = RASPBERRY_PumpEvents;
-    device->CreateWindowFramebuffer = SDL_RASPBERRY_CreateWindowFramebuffer;
-    device->UpdateWindowFramebuffer = SDL_RASPBERRY_UpdateWindowFramebuffer;
-    device->DestroyWindowFramebuffer = SDL_RASPBERRY_DestroyWindowFramebuffer;
-    device->GetDisplayBounds = SDL_RASPBERRY_GetDisplayBounds;
+    device->CreateWindow = RASPBERRY_CreateWindow;
+    device->CreateWindowFramebuffer = RASPBERRY_CreateWindowFramebuffer;
+    device->UpdateWindowFramebuffer = RASPBERRY_UpdateWindowFramebuffer;
+    device->DestroyWindowFramebuffer = RASPBERRY_DestroyWindowFramebuffer;
+    device->GetDisplayBounds = RASPBERRY_GetDisplayBounds;
 
     device->free = RASPBERRY_DeleteDevice;
 
@@ -116,35 +138,52 @@ VideoBootStrap RASPBERRY_bootstrap = {
     RASPBERRY_Available, RASPBERRY_CreateDevice
 };
 
-
 int
 RASPBERRY_VideoInit(_THIS)
 {
+    unsigned int mb_addr = 0x40007000;      // 0x7000 in L2 cache coherent mode
+    volatile unsigned int *mailbuffer = (unsigned int *) mb_addr;
     SDL_DisplayMode mode;
 
-#if BYTES_PER_PIXEL == 2
-    mode.format = SDL_PIXELFORMAT_RGB565;
-#else
+    mailbuffer[0] = 8 * 4;             // size of this message
+    mailbuffer[1] = 0;                  // this is a request
+    mailbuffer[2] = TAG_GET_PHYS_WH;    // get physical width/height tag
+    mailbuffer[3] = 8;                  // value buffer size
+    mailbuffer[4] = 0;                  // request/response
+    mailbuffer[5] = 0;                  // space to return width
+    mailbuffer[6] = 0;                  // space to return height
+    mailbuffer[7] = 0;
+    Raspberry_MailboxWrite(MAIL_TAGS, mb_addr);
+
+    Raspberry_MailboxRead(MAIL_TAGS);
+    if (mailbuffer[1] != MAIL_FULL) {
+        return SDL_SetError("Can't get physiscal video size");
+    }
+
+    phys_width = mailbuffer[5];
+    phys_height = mailbuffer[6];
+
+    SDL_zero(mode);
     mode.format = SDL_PIXELFORMAT_ABGR8888;
-#endif
-    mode.w = fb_width;
-    mode.h = fb_height;
-    mode.refresh_rate = 0;
+    mode.w = phys_width;
+    mode.h = phys_height;
+    mode.refresh_rate = 60;
     mode.driverdata = NULL;
+
     if (SDL_AddBasicVideoDisplay(&mode) < 0) {
         return -1;
     }
 
-    SDL_zero(mode);
     SDL_AddDisplayMode(&_this->displays[0], &mode);
 
-    /* We're done! */
     return 0;
 }
 
 static int
 RASPBERRY_SetDisplayMode(_THIS, SDL_VideoDisplay * display, SDL_DisplayMode * mode)
 {
+    phys_width = mode->w;
+    phys_height = mode->h;
     return 0;
 }
 
@@ -154,12 +193,12 @@ RASPBERRY_VideoQuit(_THIS)
 }
 
 static int
-SDL_RASPBERRY_GetDisplayBounds (_THIS, SDL_VideoDisplay * display, SDL_Rect * rect)
+RASPBERRY_GetDisplayBounds (_THIS, SDL_VideoDisplay * display, SDL_Rect * rect)
 {
     rect->x = 0;
     rect->y = 0;
-    rect->w = fb_width;
-    rect->h = fb_height;
+    rect->w = phys_width;
+    rect->h = phys_height;
     return 0;
 }
 

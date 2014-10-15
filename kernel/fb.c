@@ -96,7 +96,7 @@ void fb_init(int width, int height) {
     }
 
     /* Now set the physical and virtual sizes and bit depth and allocate the framebuffer */
-    mailbuffer[0] = 29 * 4;
+    mailbuffer[0] = 22 * 4;
     mailbuffer[1] = 0;
 
     mailbuffer[2] = TAG_SET_PHYS_WH;
@@ -116,34 +116,21 @@ void fb_init(int width, int height) {
     mailbuffer[14] = 4;
     mailbuffer[15] = BPP;
 
-    mailbuffer[16] = TAG_SET_OVERSCAN;
-    mailbuffer[17] = 16;
-    mailbuffer[18] = 16;
-    mailbuffer[19] = 0; // overscan_top;
-    mailbuffer[20] = 0; // overscan_bottom;
-    mailbuffer[21] = 0; // overscan_left;
-    mailbuffer[22] = 0; // overscan_right;
+    mailbuffer[16] = TAG_ALLOCATE_BUFFER;
+    mailbuffer[17] = 8;  // response size = 8
+    mailbuffer[18] = 4;  // request size = 4
+    mailbuffer[19] = 16; // requested alignment of buffer, space for returned address
+    mailbuffer[20] = 0;  // space for returned size
 
-    mailbuffer[23] = TAG_ALLOCATE_BUFFER;
-    mailbuffer[24] = 8;  // response size = 8
-    mailbuffer[25] = 4;  // request size = 4
-    mailbuffer[26] = 16; // requested alignment of buffer, space for returned address
-    mailbuffer[27] = 0;  // space for returned size
-
-    mailbuffer[28] = 0;  // terminating tag
+    mailbuffer[21] = 0;  // terminating tag
     mbox_write(MAIL_TAGS, mb_addr);
 
     mbox_read(MAIL_TAGS);
 
     /* Check the allocate_buffer response */
-    if (mailbuffer[1] == MAIL_FULL && mailbuffer[25] == (MAIL_FULL | 8)) {
-        fb_addr = mailbuffer[26];
-        fb_size = mailbuffer[27];
-
-        //this->overscan_left = mailbuffer[21];
-        //this->overscan_right = mailbuffer[22];
-        //this->overscan_top = mailbuffer[19];
-        //this->overscan_bottom = mailbuffer[20];
+    if (mailbuffer[1] == MAIL_FULL && mailbuffer[18] == (MAIL_FULL | 8)) {
+        fb_addr = mailbuffer[19];
+        fb_size = mailbuffer[20];
 
         /* Get the pitch of the display */
         mailbuffer[0] = 7 * 4;

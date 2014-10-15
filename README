@@ -1,7 +1,7 @@
 Raspberry Pi Baremetal
 
-This a code repository for bare-metal Raspberry Pi libraries and applications ports
-collected from various sources.
+This a code repository for bare-metal Raspberry Pi libraries and applications
+ports.
 
    kernel     - Core startup and kernel code
 
@@ -19,7 +19,8 @@ collected from various sources.
 
 BUILD
 
-   You need the arm-none-eabi toolchain available from https://launchpad.net/gcc-arm-embedded
+   You need the arm-none-eabi toolchain available from
+   https://launchpad.net/gcc-arm-embedded
 
    Compile with:
 
@@ -29,8 +30,8 @@ BUILD
 
 INSTALL
 
-   The applications folders abbaye and template builds a kernel.img file that must be copied
-   to an SD card along with the firmware files:
+   The applications folders abbaye and template builds a kernel.img file that
+   must be copied to an SD card along with the firmware files:
 
       bootcode.bin
       config.txt
@@ -39,8 +40,10 @@ INSTALL
       start_cd.elf
       start.elf
 
-   Firmware files can be downloaded from https://github.com/raspberrypi/firmware/tree/master/boot
+   Firmware files can be downloaded from
+   https://github.com/raspberrypi/firmware/tree/master/boot
 
-   Please note that the csud library has a bug that crashes the application when used with
-   firmware files release after october 2012. The code, without csud support, was tested
-   using firmware files dated july 5, 2013, any later firmware may not work correctly.
+   Please note that the csud library has a bug that crashes the application
+   when used with firmware files release after october 2012. The code,
+   without csud support, was tested using firmware files dated july 5, 2013,
+   any later firmware may not work correctly.

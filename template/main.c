@@ -181,7 +181,12 @@ void main() {
     int led_status = LOW, x, y;
     struct timer_wait tw;
 
+    // Default screen resolution (set in config.txt or auto-detected)
+    //fb_init(0, 0);
+
+    // Sets a specific screen resolution
     fb_init(32 + 320 + 32, 32 + 200 + 32);
+
     fb_fill_rectangle(0, 0, fb_width - 1, fb_height - 1, BORDER_COLOR);
 
     initscr(40, 25);
@@ -254,6 +259,6 @@ void main() {
             toggle_cursor();
         }
 
-        flush_cache();
+        fb_flip();
     }
 }

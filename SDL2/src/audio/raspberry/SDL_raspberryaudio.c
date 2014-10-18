@@ -20,8 +20,6 @@
 */
 #include "../../SDL_internal.h"
 
-/* Output audio to nowhere... */
-
 #include "SDL_audio.h"
 #include "../SDL_audio_c.h"
 #include "SDL_raspberryaudio.h"
@@ -36,15 +34,15 @@ static volatile int      cur_buffer;
 static volatile DMA_CB   dma_cb[2];
 static unsigned char   * dma_buffer[2];
 
-static Uint16          * audio_buffer;
+static Uint8           * audio_buffer;
 
 void sdl_audio_dma_irq() {
     int16_t * src;
     uint32_t data;
 
-    DMA->enable = DMA_EN0;  // Set DMA Channel 0 Enable Bit
-    DMA->ch[0].conblk_ad = 0x40000000 | (uint32_t) &dma_cb[cur_buffer]; // Set Control Block Data Address Into DMA Channel 0 Controller
-    DMA->ch[0].cs = DMA_ACTIVE | DMA_INT; // Start DMA
+    DMA->enable = DMA_EN0;
+    DMA->ch[0].conblk_ad = 0x40000000 | (uint32_t) &dma_cb[cur_buffer];
+    DMA->ch[0].cs = DMA_ACTIVE | DMA_INT;
 
     cur_buffer = cur_buffer == 0 ? 1 : 0;
 
@@ -79,70 +77,6 @@ void sdl_audio_dma_irq() {
     }
 }
 
-static int RASPBERRYAUD_OpenDevice(_THIS, const char *devname, int iscapture) {
-    volatile uint32_t * ptr;
-    unsigned int buffer_size;
-
-    // Force our parameters
-    this->spec.freq = 22050;
-    this->spec.channels = 2;
-    this->spec.format = AUDIO_S16;
-
-    // Allocate dma buffers (32bit samples size, 16-bytes aligned)
-    for (int i = 0; i < 2; i++) {
-        if (dma_buffer[i] != NULL) {
-            free(dma_buffer[i]);
-        }
-        dma_buffer[i] = (unsigned char *)malloc(this->spec.samples * 2 * 4 + 15);
-        memset(dma_buffer[i], 0, this->spec.samples * 2 * 4 + 15);
-    }
-
-    // Allocate callback buffer (16bit samples size)
-    audio_buffer = (Uint16 *)malloc(this->spec.samples * this->spec.channels * 2);
-    memset(audio_buffer, 0, this->spec.samples * this->spec.channels * 2);
-
-    ptr = (uint32_t *) (GPIO_BASE + GPIO_GPFSEL4);
-    *ptr = GPIO_FSEL0_ALT0 + GPIO_FSEL5_ALT0;
-    usleep(110);
-
-    PWM->ctl = 0;
-    usleep(110);
-
-    CLK->PWMCTL = CM_PASSWORD | CM_KILL;
-    while ((CLK->PWMCTL & CM_BUSY) != 0)
-        usleep(1);
-
-    CLK->PWMDIV = CM_PASSWORD | (2 << 12);
-    CLK->PWMCTL = CM_PASSWORD | CM_ENAB | CM_SRC_PLLDPER;
-    while ((CLK->PWMCTL & CM_BUSY) == 0)
-        usleep(1);
-
-    PWM->rng1 = PWM->rng2 = 11336;
-
-    for (int i = 0; i < 2; i++) {
-        uint32_t source_ad = (uint32_t) dma_buffer[i];
-        while((source_ad & 0xF) != 0) { // Align to 16-bytes boundary
-            source_ad++;
-        }
-        dma_cb[i].ti = DMA_DEST_DREQ | DMA_PERMAP_5 | DMA_SRC_INC | DMA_INTEN;
-        dma_cb[i].source_ad = 0x40000000 + source_ad;
-        dma_cb[i].dest_ad = 0x7E000000 | 0x20C000 | 0x18;
-        dma_cb[i].txfr_len = this->spec.samples * 2 * 4;
-        dma_cb[i].stride = 0;
-        dma_cb[i].nextconbk = 0;
-    }
-
-    PWM->dmac = PWM_ENAB | 0x0001; // PWM DMA Enable
-    PWM->ctl = PWM_USEF2 | PWM_PWEN2 | PWM_USEF1 | PWM_PWEN1 | PWM_CLRF1;
-
-    device = this;
-    cur_buffer = 0;
-    running = 0;
-    locked = 0;
-
-    return 0; /* always succeeds. */
-}
-
 static void RASPBERRYAUD_CloseDevice(_THIS) {
     IRQ->irq1Disable = INTERRUPT_DMA0;
     DMA->ch[0].cs = DMA_RESET;
@@ -160,6 +94,85 @@ static void RASPBERRYAUD_CloseDevice(_THIS) {
     }
 }
 
+static int RASPBERRYAUD_OpenDevice(_THIS, const char *devname, int iscapture) {
+    volatile uint32_t * ptr;
+    unsigned int buffer_size;
+
+    /* Force our parameters */
+    this->spec.freq = 22050;
+    this->spec.channels = 2;
+    this->spec.format = AUDIO_S16;
+
+    /* Calculate the final parameters for this audio specification */
+    SDL_CalculateAudioSpec(&this->spec);
+
+    /* Allocate dma buffers (32bit samples size, 16-bytes aligned) */
+    for (int i = 0; i < 2; i++) {
+        if (dma_buffer[i] != NULL) {
+            free(dma_buffer[i]);
+        }
+        if ((dma_buffer[i] = (unsigned char *)malloc(this->spec.samples * this->spec.channels * 4 + 15)) == NULL) {
+            RASPBERRYAUD_CloseDevice(this);
+            return SDL_SetError("Can't allocate DMA buffer #%d", i);
+        }
+        memset(dma_buffer[i], 0, this->spec.samples * this->spec.channels * 4 + 15);
+    }
+
+    /* Allocate callback buffer (16 bit samples size) */
+    if ((audio_buffer = (Uint8 *)malloc(this->spec.size)) == NULL) {
+        RASPBERRYAUD_CloseDevice(this);
+        return SDL_SetError("Can't allocate audio callback buffer");
+    }
+    memset(audio_buffer, 0, this->spec.size);
+
+    /* Set GPIO pins for pwm output */
+    ptr = (uint32_t *) (GPIO_BASE + GPIO_GPFSEL4);
+    *ptr = GPIO_FSEL0_ALT0 + GPIO_FSEL5_ALT0;
+    usleep(110);
+
+    /* Stop pwm */
+    PWM->ctl = 0;
+    usleep(110);
+
+    CLK->PWMCTL = CM_PASSWORD | CM_KILL;
+    while ((CLK->PWMCTL & CM_BUSY) != 0)
+        usleep(1);
+
+    /* Set pwm clock divisor to 2 */
+    CLK->PWMDIV = CM_PASSWORD | (2 << 12);
+    CLK->PWMCTL = CM_PASSWORD | CM_ENAB | CM_SRC_PLLDPER;
+    while ((CLK->PWMCTL & CM_BUSY) == 0)
+        usleep(1);
+
+    /* Set pwm range for 13 bit samples */
+    PWM->rng1 = PWM->rng2 = 11336;
+
+    /* Setup DMA control blocks */
+    for (int i = 0; i < 2; i++) {
+        uint32_t source_ad = (uint32_t) dma_buffer[i];
+        while((source_ad & 0xF) != 0) { // Align to 16-bytes boundary
+            source_ad++;
+        }
+        dma_cb[i].ti = DMA_DEST_DREQ | DMA_PERMAP_5 | DMA_SRC_INC | DMA_INTEN;
+        dma_cb[i].source_ad = 0x40000000 + source_ad;
+        dma_cb[i].dest_ad = 0x7E000000 | 0x20C000 | 0x18;
+        dma_cb[i].txfr_len = this->spec.samples * this->spec.channels * 4;
+        dma_cb[i].stride = 0;
+        dma_cb[i].nextconbk = 0;
+    }
+
+    /* PWM DMA Enable */
+    PWM->dmac = PWM_ENAB | 0x0001;
+    PWM->ctl = PWM_USEF2 | PWM_PWEN2 | PWM_USEF1 | PWM_PWEN1 | PWM_CLRF1;
+
+    device = this;
+    cur_buffer = 0;
+    running = 0;
+    locked = 0;
+
+    return 0;
+}
+
 static void RASPBERRYAUD_LockDevice(_THIS) {
     locked++;
 }
@@ -173,9 +186,9 @@ static void RASPBERRYAUD_UnlockDevice(_THIS) {
     else if (!running) {
         IRQ->irq1Enable = INTERRUPT_DMA0;
 
-        DMA->enable = DMA_EN0;  // Set DMA Channel 0 Enable Bit
-        DMA->ch[0].conblk_ad = 0x40000000 | (uint32_t) &dma_cb[cur_buffer]; // Set Control Block Data Address Into DMA Channel 0 Controller
-        DMA->ch[0].cs = DMA_ACTIVE | DMA_INT; // Start DMA
+        DMA->enable = DMA_EN0;
+        DMA->ch[0].conblk_ad = 0x40000000 | (uint32_t) &dma_cb[cur_buffer];
+        DMA->ch[0].cs = DMA_ACTIVE | DMA_INT;
 
         cur_buffer = cur_buffer == 0 ? 1 : 0;
 
@@ -186,6 +199,10 @@ static void RASPBERRYAUD_UnlockDevice(_THIS) {
         locked--;
 }
 
+static Uint8 * RASPBERRYAUD_GetDeviceBuf(_THIS) {
+    return audio_buffer;
+}
+
 static int RASPBERRYAUD_Init(SDL_AudioDriverImpl * impl) {
 
     /* Set the function pointers */
@@ -193,6 +210,7 @@ static int RASPBERRYAUD_Init(SDL_AudioDriverImpl * impl) {
     impl->CloseDevice = RASPBERRYAUD_CloseDevice;
     impl->LockDevice = RASPBERRYAUD_LockDevice;
     impl->UnlockDevice = RASPBERRYAUD_UnlockDevice;
+    impl->GetDeviceBuf = RASPBERRYAUD_GetDeviceBuf;
     impl->OnlyHasDefaultOutputDevice = 1;
     impl->ProvidesOwnCallbackThread = 1;
     impl->SkipMixerLock = 1;

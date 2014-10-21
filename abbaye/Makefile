@@ -43,5 +43,5 @@ kernel.img: $(OBJS) Makefile ../kernel/raspberry.ld $(LIBS_DEP)
 	$(LD) -r -b binary -o $@ $<
 
 clean:
-	rm -f *.o kernel.elf kernel.img kernel.map
+	rm -f src/*.o kernel.elf kernel.img kernel.map
 	rm -rf $(DEPDIR)

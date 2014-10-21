@@ -64,6 +64,9 @@ void startscreen(SDL_Window *screen,uint *state,uint *grapset,uint *fullscreen) 
 
 		/* Check keyboard */
 		if ( SDL_PollEvent(&keyp) ) {
+            if (keyp.type == SDL_CONTROLLERDEVICEADDED) {
+                SDL_GameControllerOpen(keyp.cdevice.which);
+            }
 			if (keyp.type == SDL_KEYDOWN) { /* Key pressed */
 				if (keyp.key.keysym.sym == SDLK_c) { /* Change graphic set */
 					if (*grapset == 0)
@@ -84,6 +87,26 @@ void startscreen(SDL_Window *screen,uint *state,uint *grapset,uint *fullscreen) 
 					exit = 1;
 				}
 			}
+            if (keyp.type == SDL_CONTROLLERBUTTONDOWN) { /* Game controller button pressed */
+                if (keyp.cbutton.button == SDL_CONTROLLER_BUTTON_GUIDE) { /* Change graphic set */
+                    if (*grapset == 0)
+                        *grapset = 1;
+                    else
+                        *grapset = 0;
+                }
+                if (keyp.cbutton.button == SDL_CONTROLLER_BUTTON_B) { /* Show instructions */
+                    if (srcintro.y == 0)
+                        srcintro.y = 192;
+                    else {
+                        srcintro.y = 0;
+                        musicplay = 0;
+                    }
+                }
+                if (keyp.cbutton.button == SDL_CONTROLLER_BUTTON_START) { /* Start game */
+                    *state = 2;
+                    exit = 1;
+                }
+            }
 		}
 
 	}

@@ -410,6 +410,47 @@ void control (struct hero *jean,uint *keyp) {
                 jean->push[3] = 0;
         }
 
+        if (event.type == SDL_CONTROLLERBUTTONDOWN) {
+            if (event.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_UP) {
+                if ((jean->push[0] == 0) && (jean->jump == 0) && (jean->ducking == 0))
+                    jean->jump = 1;
+            }
+            if (event.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_DOWN) {
+                if ((jean->push[1] == 0) && (jean->jump == 0)) {
+                    jean->push[1] = 1;
+                    jean->ducking = 1;
+                }
+            }
+            if (event.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_LEFT) {
+                if (jean->push[2] == 0) {
+                    jean->push[2] = 1;
+                    jean->push[3] = 0;
+                }
+            }
+            if (event.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_RIGHT) {
+                if (jean->push[3] == 0) {
+                    jean->push[3] = 1;
+                    jean->push[2] = 0;
+                }
+            }
+            if (event.cbutton.button == SDL_CONTROLLER_BUTTON_GUIDE)
+                *keyp = 9;
+            if (event.cbutton.button == SDL_CONTROLLER_BUTTON_START)
+                *keyp = 10;
+        }
+
+        if (event.type == SDL_CONTROLLERBUTTONUP) {
+            if (event.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_UP)
+                jean->push[0] = 0;
+            if (event.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_DOWN) {
+                jean->push[1] = 0;
+                jean->ducking = 0;
+            }
+            if (event.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_LEFT)
+                jean->push[2] = 0;
+            if (event.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_RIGHT)
+                jean->push[3] = 0;
+        }
     }
 
 }
@@ -715,6 +756,9 @@ void keybpause (uint *keyp) {
         if (event.type == SDL_KEYDOWN) {
             if ((event.key.keysym.sym == SDLK_SPACE) || (event.key.keysym.sym == SDLK_LEFT) || (event.key.keysym.sym == SDLK_RIGHT))
                     *keyp = 1;
+        }
+        else if (event.type == SDL_CONTROLLERBUTTONDOWN) {
+            *keyp = 1;
         }
     }
 

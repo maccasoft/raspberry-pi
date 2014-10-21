@@ -110,6 +110,18 @@ void history(SDL_Window *screen,uint *state,uint *grapset,uint *fullscreen) {
 					exit = 1;
 				}
 			}
+            else if (keyp.type == SDL_CONTROLLERBUTTONDOWN) { /* Game controller button pressed */
+                if (keyp.cbutton.button == SDL_CONTROLLER_BUTTON_GUIDE) { /* Change graphic set */
+                    if (*grapset == 0)
+                        *grapset = 1;
+                    else
+                        *grapset = 0;
+                }
+                if (keyp.cbutton.button == SDL_CONTROLLER_BUTTON_START) { /* Start game */
+                    *state = 2;
+                    exit = 1;
+                }
+            }
 		}
 
 		if (posenem[3] > 256) { /* Ending history */

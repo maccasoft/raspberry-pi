@@ -41,7 +41,7 @@ void main () {
 	uint grapset = 1; /* 0-8bits, 1-16bits */
 	uint fullscreen = 0; /* 0-Windowed,1-Fullscreen */
 
-    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS);
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER);
 
 	/* Creating window */
 	SDL_Window *screen = SDL_CreateWindow("Abbaye des Morts v2.0",0,0,256,192,SDL_WINDOW_FULLSCREEN);

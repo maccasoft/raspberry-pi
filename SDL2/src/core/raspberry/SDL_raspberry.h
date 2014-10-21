@@ -1164,6 +1164,10 @@ extern "C" {
 void     Raspberry_MailboxWrite(uint8_t channel, uint32_t data);
 uint32_t Raspberry_MailboxRead(uint8_t channel);
 
+void     Raspberry_pinMode(int pin, int mode);
+int      Raspberry_digitalRead(int pin);
+void     Raspberry_digitalWrite(int pin, int value);
+
 void     usleep(int usec);
 
 #if defined(__cplusplus)

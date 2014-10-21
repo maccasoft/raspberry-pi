@@ -20,13 +20,43 @@
 */
 #include "../../SDL_internal.h"
 
-#if defined(SDL_JOYSTICK_DUMMY) || defined(SDL_JOYSTICK_DISABLED)
-
-/* This is the dummy implementation of the SDL joystick API */
+#if defined(SDL_JOYSTICK_RASPBERRY)
 
 #include "SDL_joystick.h"
 #include "../SDL_sysjoystick.h"
 #include "../SDL_joystick_c.h"
+
+#include "SDL_events.h"
+
+#ifdef HAVE_NES
+#include "../../core/raspberry/SDL_raspberry.h"
+
+#define JOY_CLK         24
+#define JOY_LCH         23
+#define JOY_DATAOUT0    25
+#define JOY_DATAOUT1    22
+
+#define NES0_RIGHT      0x0001
+#define NES0_LEFT       0x0002
+#define NES0_DOWN       0x0004
+#define NES0_UP         0x0008
+#define NES0_START      0x0010
+#define NES0_SELECT     0x0020
+#define NES0_B          0x0040
+#define NES0_A          0x0080
+
+#define NES1_RIGHT      0x0100
+#define NES1_LEFT       0x0200
+#define NES1_DOWN       0x0400
+#define NES1_UP         0x0800
+#define NES1_START      0x1000
+#define NES1_SELECT     0x2000
+#define NES1_B          0x4000
+#define NES1_A          0x8000
+
+uint32_t old_nes_bits;
+
+#endif // HAVE_NES
 
 /* Function to scan the system for joysticks.
  * It should return 0, or -1 on an unrecoverable fatal error.
@@ -39,7 +69,13 @@ SDL_SYS_JoystickInit(void)
 
 int SDL_SYS_NumJoysticks()
 {
-    return 0;
+    int num = 0;
+
+#ifdef HAVE_NES
+    num += 1;
+#endif // HAVE_NES
+
+    return num;
 }
 
 void SDL_SYS_JoystickDetect()
@@ -48,13 +84,22 @@ void SDL_SYS_JoystickDetect()
 
 SDL_bool SDL_SYS_JoystickNeedsPolling()
 {
-    return SDL_FALSE;
+    return SDL_TRUE;
 }
 
 /* Function to get the device-dependent name of a joystick */
 const char *
 SDL_SYS_JoystickNameForDeviceIndex(int device_index)
 {
+    int num = 0;
+
+#ifdef HAVE_NES
+    if (device_index == num) {
+        return "NES Gamepad";
+    }
+    num++;
+#endif // HAVE_NES
+
     SDL_SetError("Logic error: No joysticks available");
     return (NULL);
 }
@@ -73,6 +118,27 @@ SDL_JoystickID SDL_SYS_GetInstanceIdOfDeviceIndex(int device_index)
 int
 SDL_SYS_JoystickOpen(SDL_Joystick * joystick, int device_index)
 {
+    int num = 0;
+
+#ifdef HAVE_NES
+    if (device_index == num) {
+        /* set I/Os pins */
+        Raspberry_pinMode(JOY_CLK, 0);
+        Raspberry_pinMode(JOY_LCH, 0);
+        Raspberry_pinMode(JOY_DATAOUT0, 1);
+        Raspberry_pinMode(JOY_DATAOUT1, 1);
+
+        joystick->nbuttons = 8;
+        joystick->naxes = 0;
+        joystick->nhats = 0;
+
+        old_nes_bits = 0xFF;
+
+        return 0;
+    }
+    num++;
+#endif // HAVE_NES
+
     return SDL_SetError("Logic error: No joysticks available");
 }
 
@@ -90,6 +156,69 @@ SDL_bool SDL_SYS_JoystickAttached(SDL_Joystick *joystick)
 void
 SDL_SYS_JoystickUpdate(SDL_Joystick * joystick)
 {
+#ifdef HAVE_NES
+    uint32_t nes_bits;
+
+#ifdef HAVE_NES_SN74165 /* Experimental controller with SN74165 shift register */
+
+    /* set clock and latch to 1 */
+    Raspberry_digitalWrite(JOY_LCH, 1);
+    Raspberry_digitalWrite(JOY_CLK, 1);
+    usleep(100);
+
+    /* set latch to 0 */
+    Raspberry_digitalWrite(JOY_LCH, 0);
+    usleep(100);
+
+    /* set latch to 1 and clock to 0 */
+    Raspberry_digitalWrite(JOY_LCH, 1);
+    Raspberry_digitalWrite(JOY_CLK, 0);
+    usleep(100);
+
+#else
+
+    /* set clock and latch to 0 */
+    Raspberry_digitalWrite(JOY_LCH, 0);
+    Raspberry_digitalWrite(JOY_CLK, 0);
+    usleep(100);
+
+    /* set latch to 1 */
+    Raspberry_digitalWrite(JOY_LCH, 1);
+    usleep(100);
+
+    /* set latch to 0 */
+    Raspberry_digitalWrite(JOY_LCH, 0);
+    usleep(100);
+
+#endif // HAVE_NES_SN74165
+
+    /* data is now ready to shift out, clear storage */
+    nes_bits = 0;
+
+    /* read 8 bits, 1st bits are already latched and ready, simply save and clock remaining bits */
+    for (int i = 0; i < 8; i++) {
+        nes_bits <<= 1;
+        if (Raspberry_digitalRead(JOY_DATAOUT0))
+            nes_bits |= 0x00000001;
+        if (Raspberry_digitalRead(JOY_DATAOUT1))
+            nes_bits |= 0x00000100;
+
+        Raspberry_digitalWrite(JOY_CLK, 1);
+        usleep(100);
+        Raspberry_digitalWrite(JOY_CLK, 0);
+        usleep(100);
+    }
+
+    uint32_t mask = 1;
+    for (int i = 0; i < 8; i++, mask <<= 1) {
+        if ((nes_bits & mask) != (old_nes_bits & mask)) {
+            SDL_PrivateJoystickButton(joystick, i, !(nes_bits & mask) ? SDL_PRESSED : SDL_RELEASED);
+        }
+    }
+
+    old_nes_bits = nes_bits;
+
+#endif // HAVE_NES
     return;
 }
 
@@ -128,6 +257,6 @@ SDL_JoystickGUID SDL_SYS_JoystickGetGUID(SDL_Joystick * joystick)
     return guid;
 }
 
-#endif /* SDL_JOYSTICK_DUMMY || SDL_JOYSTICK_DISABLED */
+#endif /* SDL_JOYSTICK_RASPBERRY */
 
 /* vi: set ts=4 sw=4 expandtab: */

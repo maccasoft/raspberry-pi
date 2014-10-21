@@ -147,6 +147,7 @@
 #endif
 
 #define HAVE_CSUD
+#define HAVE_NES
 
 /* SDL internal assertion support */
 /* #undef SDL_DEFAULT_ASSERT_LEVEL */
@@ -157,7 +158,7 @@
 #define SDL_CPUINFO_DISABLED 1
 /* #undef SDL_EVENTS_DISABLED */
 /* #undef SDL_FILE_DISABLED */
-#define SDL_JOYSTICK_DISABLED 1
+/* #undef #define SDL_JOYSTICK_DISABLED */
 #define SDL_HAPTIC_DISABLED 1
 #define SDL_LOADSO_DISABLED 1
 /* #undef SDL_RENDER_DISABLED */
@@ -166,6 +167,9 @@
 /* #undef SDL_VIDEO_DISABLED */
 /* #undef SDL_POWER_DISABLED */
 /* #undef SDL_FILESYSTEM_DISABLED */
+
+/* Enable the joystick driver */
+#define SDL_JOYSTICK_RASPBERRY      1
 
 /* Enable various audio drivers */
 #define SDL_AUDIO_DRIVER_RASPBERRY  1

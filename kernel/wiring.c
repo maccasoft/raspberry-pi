@@ -87,14 +87,6 @@ static uint8_t gpioToPUDCLK [] = {
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 };
 
-static void clockDelay() {
-    unsigned int timer = 150;
-
-    while(timer--) {
-        __asm ("mov r0, r0"); /* No-op */
-    }
-}
-
 void pinMode(int pin, int mode) {
     int fSel = gpioToGPFSEL[pin];
     int shift = gpioToShift[pin];
@@ -114,14 +106,14 @@ void pinMode(int pin, int mode) {
         else {
             GPIO->gppud = 0;
         }
-        clockDelay(5);
+        usleep(5);
         GPIO->gppudclk[gpioToPUDCLK[pin]] = 1 << (pin & 31);
-        clockDelay (5);
+        usleep(5);
 
         GPIO->gppud = 0;
-        clockDelay(5);
+        usleep(5);
         GPIO->gppudclk[gpioToPUDCLK[pin]] = 0;
-        clockDelay(5);
+        usleep(5);
     }
 }
 

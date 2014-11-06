@@ -15,8 +15,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdint.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 
 void * __dso_handle;
 
@@ -104,3 +106,11 @@ void _fini() {
     while(1)
         ;
 }
+
+int _gettimeofday(struct timeval *tv, struct timezone *tz) {
+    uint64_t t = *((uint64_t *)0x20003004);  // get uptime in nanoseconds
+    tv->tv_sec = t / 1000000;  // convert to seconds
+    tv->tv_usec = ( t % 1000000 ) / 1000;  // get remaining microseconds
+    return 0;  // return non-zero for error
+}
+

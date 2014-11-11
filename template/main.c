@@ -19,6 +19,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef HAVE_CSUD
+#include <usbd/usbd.h>
+#include <device/hid/keyboard.h>
+#endif
+
+#ifdef HAVE_USPI
+#include <uspi.h>
+#endif
+
 #include "platform.h"
 #include "wiring.h"
 #include "console.h"
@@ -40,8 +49,9 @@ extern "C" {
 #endif
 
 __attribute__ ((interrupt ("IRQ"))) void interrupt_irq() {
-    if ((IRQ->irqBasicPending & INTERRUPT_ARM_TIMER) != 0)
-        ;
+#ifdef HAVE_USPI
+    USPiInterruptHandler ();
+#endif
 }
 
 #if defined(__cplusplus)
@@ -74,10 +84,7 @@ __attribute__ ((interrupt ("IRQ"))) void interrupt_irq() {
 #define KEY_DOWN    0x5100
 #define KEY_UP      0x5200
 
-#ifdef HAVE_CSUD
-
-#include <usbd/usbd.h>
-#include <device/hid/keyboard.h>
+#if defined(HAVE_CSUD) || defined(HAVE_USPI)
 
 #define SWAP_BYTES(b)   (((b & 0xFF) << 8) | ((b & 0xFF00) >> 8))
 
@@ -102,6 +109,10 @@ static unsigned char keyShift_it[] = {
 };
 
 #define MAX_KEYS        6
+
+#endif
+
+#ifdef HAVE_CSUD
 
 int kbd_getchar() {
     static int keydown[MAX_KEYS] = { 0, 0, 0, 0, 0, 0 };
@@ -169,17 +180,118 @@ int kbd_getchar() {
     return -1;
 }
 
-#else
-
-int kbd_getchar() {
-    return -1;
-}
-
 #endif // HAVE_CSUD
 
+#ifdef HAVE_USPI
+
+void LogWrite (const char *pSource, unsigned Severity, const char *pMessage, ...)
+{
+    // Do nothing
+}
+
+void uspi_assertion_failed (const char *pExpr, const char *pFile, unsigned nLine)
+{
+    char temp[256];
+
+    sprintf(temp, "\r\nUSPi assertion failed: %s at %s:%d\r\n\r\n", pExpr, pFile, nLine);
+    addstr(temp);
+
+    while(1);
+}
+
+void DebugHexdump (const void *pBuffer, unsigned nBufLen, const char *pSource /* = 0 */)
+{
+    // Do nothing
+}
+
+#define MAX_KEYBUFFER  16
+
+static int readIndex;
+static int writeIndex;
+static int keybufferAvailable;
+static unsigned short keyBuffer[MAX_KEYBUFFER];
+
+int kbd_getchar() {
+    if (keybufferAvailable <= 0)
+        return -1;
+
+    int key = keyBuffer[readIndex++];
+    if (readIndex >= MAX_KEYBUFFER)
+        readIndex = 0;
+
+    keybufferAvailable--;
+
+    return key;
+}
+
+static void put_key(unsigned short key) {
+    if (keybufferAvailable >= MAX_KEYBUFFER)
+        return;
+
+    keyBuffer[writeIndex++] = key;
+    if (writeIndex >= MAX_KEYBUFFER)
+        writeIndex = 0;
+
+    keybufferAvailable++;
+}
+
+static void USPiKeyStatusHandlerRaw (unsigned char ucModifiers, const unsigned char *pRawKeys) {
+    static int keydown[MAX_KEYS] = { 0, 0, 0, 0, 0, 0 };
+    const unsigned char *ptr;
+
+    ptr = pRawKeys;
+    while (*ptr) {
+        short key = *ptr++;
+        for (int i = 0; i < MAX_KEYS; i++) {
+            if (key == keydown[i]) {
+                key = 0;
+                break;
+            }
+        }
+        if (key != 0) {
+            for (int i = 0; i < MAX_KEYS; i++) {
+                if (keydown[i] == 0) {
+                    keydown[i] = key;
+                    if ((ucModifiers & (LSHIFT | RSHIFT)) != 0) {
+                        if (key >= sizeof(keyShift_it)) {
+                            put_key(key);
+                        }
+                        put_key(keyShift_it[key] != 0 ? keyShift_it[key] : SWAP_BYTES(key));
+                    }
+                    else {
+                        if (key >= sizeof(keyNormal_it)) {
+                            put_key(key);
+                        }
+                        put_key(keyNormal_it[key] != 0 ? keyNormal_it[key] : SWAP_BYTES(key));
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < MAX_KEYS; i++) {
+        short key = keydown[i];
+        if (key != 0) {
+            ptr = pRawKeys;
+            while (*ptr) {
+                if (*ptr == key)
+                    break;
+                ptr++;
+            }
+            if (*ptr == '\0') {
+                keydown[i] = 0;
+            }
+        }
+    }
+}
+
+#endif // HAVE_USPI
+
 void main() {
-    int led_status = LOW, x, y;
+    int x, y;
     struct timer_wait tw;
+    int led_status = LOW;
 
     // Default screen resolution (set in config.txt or auto-detected)
     //fb_init(0, 0);
@@ -199,6 +311,17 @@ void main() {
 
 #ifdef HAVE_CSUD
     UsbInitialise();
+    if (KeyboardCount() == 0)
+        addstr("\r\nNO KEYBOARD DETECTED\r\n");
+#endif
+
+#ifdef HAVE_USPI
+    USPiInitialize ();
+    if (USPiKeyboardAvailable()) {
+        USPiKeyboardRegisterKeyStatusHandlerRaw (USPiKeyStatusHandlerRaw);
+    }
+    else
+        addstr("\r\nNO KEYBOARD DETECTED\r\n");
 #endif
 
     pinMode(16, OUTPUT);

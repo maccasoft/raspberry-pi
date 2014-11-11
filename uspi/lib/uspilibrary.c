@@ -3,7 +3,7 @@
 //
 // USPi - An USB driver for Raspberry Pi written in C
 // Copyright (C) 2014  R. Stange <rsta2@o2online.de>
-// 
+//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -23,6 +23,8 @@
 #include <uspi/util.h>
 #include <uspi/assert.h>
 
+extern unsigned TimerInitialize (void);
+
 static const char FromUSPi[] = "uspi";
 
 static TUSPiLibrary *s_pLibrary = 0;
@@ -32,6 +34,8 @@ int USPiInitialize (void)
 	assert (s_pLibrary == 0);
 	s_pLibrary = (TUSPiLibrary *) malloc (sizeof (TUSPiLibrary));
 	assert (s_pLibrary != 0);
+
+	TimerInitialize ();
 
 	DeviceNameService (&s_pLibrary->NameService);
 	DWHCIDevice (&s_pLibrary->DWHCI);
@@ -78,7 +82,7 @@ int USPiInitialize (void)
 	}
 
 	s_pLibrary->pUKBD1 = (TUSBKeyboardDevice *) DeviceNameServiceGetDevice (DeviceNameServiceGet (), "ukbd1", FALSE);
-	
+
 	s_pLibrary->pUMSD1 = (TUSBBulkOnlyMassStorageDevice *) DeviceNameServiceGetDevice (DeviceNameServiceGet (), "umsd1", TRUE);
 
 	s_pLibrary->pEth0 = (TSMSC951xDevice *) DeviceNameServiceGetDevice (DeviceNameServiceGet (), "eth0", FALSE);

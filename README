@@ -6,6 +6,7 @@ ports.
    kernel     - Core startup and kernel code
 
    csud       - Chadder's Simple USB Driver
+   uspi       - An USB driver for Raspberry Pi written in C
    libpng     - PNG image file format library
    libogg     - OGG file format library
    libvorbis  - OGG Vorbis audio decode library
@@ -14,8 +15,9 @@ ports.
    SDL2_mixer - Audio mixer support library for SDL2
    zlib       - Z compression library
 
-   abbaye     - Abbaye des Morts, a retro-style platform game based on SDL2
-   template   - Simple application template
+   abbaye       - Abbaye des Morts, a platform game based on SDL2
+   template     - Simple application template
+   templaye_sdl - SDL-based application template
 
 BUILD
 

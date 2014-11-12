@@ -46,6 +46,8 @@
 #define MAIL_COUNT    0x7 // Mailbox Channel 7: Counter
 #define MAIL_TAGS     0x8 // Mailbox Channel 8: Tags (ARM to VC)
 
+#define TAG_GET_BOARD_REVISION  0x00010002 // Hardware: Get Board Revision (Response: Board Revision)
+
 //
 // System Timers
 //
@@ -173,9 +175,29 @@ void LeaveCritical (void)
 	}
 }
 
-int IsModelA (void)
+int GetBoardRevision (void)
 {
-    return 0;
+    unsigned int mb_addr = 0x40007000;      // 0x7000 in L2 cache coherent mode
+    volatile unsigned int *mailbuffer = (unsigned int *) mb_addr;
+
+    /* Get the display size */
+    mailbuffer[0] = 7 * 4;             // size of this message
+    mailbuffer[1] = 0;                  // this is a request
+
+    mailbuffer[2] = TAG_GET_BOARD_REVISION;
+    mailbuffer[3] = 4;                  // value buffer size
+    mailbuffer[4] = 0;                  // request/response
+    mailbuffer[5] = 0;                  // space to return value
+
+    mailbuffer[6] = 0;
+    mbox_write(MAIL_TAGS, mb_addr);
+
+    mbox_read(MAIL_TAGS);
+    if (mailbuffer[1] == MAIL_FULL) {
+        return mailbuffer[5];
+    }
+
+    return -1;
 }
 
 int SetPowerStateOn (unsigned nDeviceId)

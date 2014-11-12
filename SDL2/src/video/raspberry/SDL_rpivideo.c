@@ -44,6 +44,15 @@
 #include "device/hid/keyboard.h"
 #endif // HAVE_CSUD
 
+#ifdef HAVE_USPI
+#include "uspi.h"
+
+#define MAX_KEYS        6
+
+static int keydown[MAX_KEYS] = { 0, 0, 0, 0, 0, 0 };
+static unsigned char old_modifiers;
+#endif // HAVE_USPI
+
 #define RASPBERRYVID_DRIVER_NAME "raspberry"
 
 /* Initialization/Query functions */
@@ -100,6 +109,76 @@ RASPBERRY_DeleteDevice(SDL_VideoDevice * device)
     SDL_free(device);
 }
 
+#ifdef HAVE_USPI
+static void
+RASPBERRY_USPiKeyStatusHandlerRaw (unsigned char ucModifiers, const unsigned char *pRawKeys) {
+    const unsigned char *ptr;
+
+    if ((old_modifiers & LSHIFT) != (ucModifiers & LSHIFT)) {
+        SDL_SendKeyboardKey((ucModifiers & LSHIFT) != 0 ? SDL_PRESSED : SDL_RELEASED, SDL_SCANCODE_LSHIFT);
+    }
+    if ((old_modifiers & RSHIFT) != (ucModifiers & RSHIFT)) {
+        SDL_SendKeyboardKey((ucModifiers & RSHIFT) != 0 ? SDL_PRESSED : SDL_RELEASED, SDL_SCANCODE_RSHIFT);
+    }
+    if ((old_modifiers & ALT) != (ucModifiers & ALT)) {
+        SDL_SendKeyboardKey((ucModifiers & ALT) != 0 ? SDL_PRESSED : SDL_RELEASED, SDL_SCANCODE_LALT);
+    }
+    if ((old_modifiers & ALTGR) != (ucModifiers & ALTGR)) {
+        SDL_SendKeyboardKey((ucModifiers & ALTGR) != 0 ? SDL_PRESSED : SDL_RELEASED, SDL_SCANCODE_RALT);
+    }
+    if ((old_modifiers & LCTRL) != (ucModifiers & LCTRL)) {
+        SDL_SendKeyboardKey((ucModifiers & LCTRL) != 0 ? SDL_PRESSED : SDL_RELEASED, SDL_SCANCODE_LCTRL);
+    }
+    if ((old_modifiers & RCTRL) != (ucModifiers & RCTRL)) {
+        SDL_SendKeyboardKey((ucModifiers & RCTRL) != 0 ? SDL_PRESSED : SDL_RELEASED, SDL_SCANCODE_RCTRL);
+    }
+    if ((old_modifiers & LWIN) != (ucModifiers & LWIN)) {
+        SDL_SendKeyboardKey((ucModifiers & LWIN) != 0 ? SDL_PRESSED : SDL_RELEASED, SDL_SCANCODE_LGUI);
+    }
+    if ((old_modifiers & RWIN) != (ucModifiers & RWIN)) {
+        SDL_SendKeyboardKey((ucModifiers & RWIN) != 0 ? SDL_PRESSED : SDL_RELEASED, SDL_SCANCODE_RGUI);
+    }
+
+    old_modifiers = ucModifiers;
+
+    ptr = pRawKeys;
+    while (*ptr) {
+        short key = *ptr++;
+        for (int i = 0; i < MAX_KEYS; i++) {
+            if (key == keydown[i]) {
+                key = 0;
+                break;
+            }
+        }
+        if (key != 0) {
+            for (int i = 0; i < MAX_KEYS; i++) {
+                if (keydown[i] == 0) {
+                    SDL_SendKeyboardKey(SDL_PRESSED, key);
+                    keydown[i] = key;
+                    break;
+                }
+            }
+        }
+    }
+
+    for (int i = 0; i < MAX_KEYS; i++) {
+        short key = keydown[i];
+        if (key != 0) {
+            ptr = pRawKeys;
+            while (*ptr) {
+                if (*ptr == key)
+                    break;
+                ptr++;
+            }
+            if (*ptr == '\0') {
+                SDL_SendKeyboardKey(SDL_RELEASED, key);
+                keydown[i] = 0;
+            }
+        }
+    }
+}
+#endif // HAVE_USPI
+
 static SDL_VideoDevice *
 RASPBERRY_CreateDevice(int devindex)
 {
@@ -129,6 +208,13 @@ RASPBERRY_CreateDevice(int devindex)
 #ifdef HAVE_CSUD
     UsbInitialise();
 #endif // HAVE_CSUD
+
+#ifdef HAVE_USPI
+    USPiInitialize ();
+    if (USPiKeyboardAvailable()) {
+        USPiKeyboardRegisterKeyStatusHandlerRaw (RASPBERRY_USPiKeyStatusHandlerRaw);
+    }
+#endif
 
     return device;
 }

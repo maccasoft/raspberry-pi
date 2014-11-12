@@ -146,7 +146,8 @@
 #define HAVE_GCC_SYNC_LOCK_TEST_AND_SET 1
 #endif
 
-#define HAVE_CSUD
+/* #undef HAVE_CSUD */
+#define HAVE_USPI
 #define HAVE_NES
 
 /* SDL internal assertion support */
@@ -179,5 +180,16 @@
 
 /* Enable system filesystem support */
 #define SDL_FILESYSTEM_DUMMY  1
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
+/* Interrupt handler, to be called from IRQ handler function */
+void SDL_Interrupt_Handler();
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif /* _SDL_config_raspberry_h */

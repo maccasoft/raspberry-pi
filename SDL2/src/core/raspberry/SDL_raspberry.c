@@ -15,7 +15,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "../../SDL_internal.h"
 #include "SDL_raspberry.h"
+
+#ifdef HAVE_USPI
+#include "uspi.h"
+#endif
+
+extern void RASPBERRYAUD_DmaInterruptHandler();
 
 // Port function select bits
 
@@ -170,4 +177,32 @@ void Raspberry_digitalWrite(int pin, int value) {
     else {
         GPIO->gpset[gpioToGPSET[pin]] = 1 << (pin & 31);
     }
+}
+
+#ifdef HAVE_USPI
+
+void LogWrite (const char *pSource, unsigned Severity, const char *pMessage, ...)
+{
+    // Do nothing
+}
+
+void uspi_assertion_failed (const char *pExpr, const char *pFile, unsigned nLine)
+{
+    while(1);
+}
+
+void DebugHexdump (const void *pBuffer, unsigned nBufLen, const char *pSource /* = 0 */)
+{
+    // Do nothing
+}
+
+#endif // HAVE_USPI
+
+void SDL_Interrupt_Handler() {
+    if ((IRQ->irq1Pending & INTERRUPT_DMA0) != 0)
+        RASPBERRYAUD_DmaInterruptHandler();
+#ifdef HAVE_USPI
+    else
+        USPiInterruptHandler ();
+#endif
 }

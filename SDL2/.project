@@ -3,6 +3,8 @@
 	<name>SDL2</name>
 	<comment></comment>
 	<projects>
+		<project>csud</project>
+		<project>uspi</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

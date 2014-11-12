@@ -36,7 +36,7 @@ static unsigned char   * dma_buffer[2];
 
 static Uint8           * audio_buffer;
 
-void sdl_audio_dma_irq() {
+void RASPBERRYAUD_DmaInterruptHandler() {
     int16_t * src;
     uint32_t data;
 

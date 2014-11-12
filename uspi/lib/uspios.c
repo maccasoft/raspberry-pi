@@ -82,6 +82,7 @@
 #define ARM_IRQBASIC_BASE   (ARM_IRQ2_BASE + ARM_IRQS_PER_REG)
 
 #define ARM_IRQ_TIMER3      (ARM_IRQ1_BASE + 3)
+#define ARM_IRQ_USB         (ARM_IRQ1_BASE + 9)
 
 #define IRQ_LINES       (ARM_IRQS_PER_REG * 2 + 8)
 
@@ -261,11 +262,6 @@ static void EnableIRQ (unsigned nIRQ)
     mmio_write (ARM_IC_IRQS_ENABLE (nIRQ), ARM_IRQ_MASK (nIRQ));
 }
 
-static void DisableIRQ (unsigned nIRQ)
-{
-    mmio_write (ARM_IC_IRQS_DISABLE (nIRQ), ARM_IRQ_MASK (nIRQ));
-}
-
 void ConnectInterrupt (unsigned nIRQ, TInterruptHandler *pHandler, void *pParam)
 {
     assert (nIRQ < IRQ_LINES);
@@ -277,45 +273,37 @@ void ConnectInterrupt (unsigned nIRQ, TInterruptHandler *pHandler, void *pParam)
     EnableIRQ (nIRQ);
 }
 
-static int CallIRQHandler (unsigned nIRQ)
-{
-    assert (nIRQ < IRQ_LINES);
-    TInterruptHandler *pHandler = m_apIRQHandler[nIRQ];
-
-    if (pHandler != 0)
-    {
-        (*pHandler) (m_pParam[nIRQ]);
-
-        return 1;
-    }
-    else
-    {
-        DisableIRQ (nIRQ);
-    }
-
-    return 0;
-}
-
 void USPiInterruptHandler (void)
 {
     DataMemBarrier();
 
-    for (unsigned nIRQ = 0; nIRQ < IRQ_LINES; nIRQ++)
+    u32 nPendReg = ARM_IC_IRQ_PENDING (ARM_IRQ_USB);
+    u32 nIRQMask = ARM_IRQ_MASK (ARM_IRQ_USB);
+
+    if (read32 (nPendReg) & nIRQMask)
     {
-        u32 nPendReg = ARM_IC_IRQ_PENDING (nIRQ);
-        u32 nIRQMask = ARM_IRQ_MASK (nIRQ);
-
-        if (read32 (nPendReg) & nIRQMask)
+        TInterruptHandler *pHandler = m_apIRQHandler[ARM_IRQ_USB];
+        if (pHandler != 0)
         {
-            if (CallIRQHandler (nIRQ))
-            {
-                write32 (nPendReg, nIRQMask);
-
-                return;
-            }
-
-            write32 (nPendReg, nIRQMask);
+            (*pHandler) (m_pParam[ARM_IRQ_USB]);
         }
+
+        write32 (nPendReg, nIRQMask);
+    }
+
+
+    nPendReg = ARM_IC_IRQ_PENDING (ARM_IRQ_TIMER3);
+    nIRQMask = ARM_IRQ_MASK (ARM_IRQ_TIMER3);
+
+    if (read32 (nPendReg) & nIRQMask)
+    {
+        TInterruptHandler *pHandler = m_apIRQHandler[ARM_IRQ_TIMER3];
+        if (pHandler != 0)
+        {
+            (*pHandler) (m_pParam[ARM_IRQ_TIMER3]);
+        }
+
+        write32 (nPendReg, nIRQMask);
     }
 
     DataMemBarrier();

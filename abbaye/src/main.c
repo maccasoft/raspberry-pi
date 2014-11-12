@@ -12,10 +12,6 @@
 #include "SDL_image.h"
 #include "SDL_mixer.h"
 
-#include "platform.h"
-
-extern void sdl_audio_dma_irq();
-
 extern void startscreen(SDL_Window *screen,uint *state,uint *grapset,uint *fullscreen);
 extern void history(SDL_Window *screen,uint *state,uint *grapset,uint *fullscreen);
 extern void game(SDL_Window *screen,uint *state,uint *grapset,uint *fullscreen);
@@ -27,8 +23,7 @@ extern "C" {
 #endif
 
 __attribute__ ((interrupt ("IRQ"))) void interrupt_irq() {
-    if ((IRQ->irq1Pending & INTERRUPT_DMA0) != 0)
-        sdl_audio_dma_irq();
+    SDL_Interrupt_Handler();
 }
 
 #if defined(__cplusplus)

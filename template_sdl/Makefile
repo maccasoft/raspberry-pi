@@ -17,7 +17,8 @@ CPPFLAGS = $(CFLAGS) -fno-exceptions -fno-unwind-tables -fno-rtti
 LDFLAGS = -T ../kernel/raspberry.ld -nostartfiles -fno-exceptions -fno-unwind-tables -fno-rtti -Wl,-Map=kernel.map -o kernel.elf
 
 include ../SDL2/pkgconfig.mk
-include ../csud/pkgconfig.mk
+#include ../csud/pkgconfig.mk
+include ../uspi/pkgconfig.mk
 
 OBJS = \
 	../kernel/start.o \

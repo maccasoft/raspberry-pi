@@ -4,12 +4,13 @@
 	<comment></comment>
 	<projects>
 		<project>SDL2</project>
-		<project>SDL2_Image</project>
 		<project>libpng</project>
 		<project>zlib</project>
 		<project>SDL2_mixer</project>
 		<project>SDL2_image</project>
 		<project>kernel</project>
+		<project>csud</project>
+		<project>uspi</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

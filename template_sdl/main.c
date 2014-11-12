@@ -4,8 +4,6 @@
 
 #include <SDL.h>
 
-#include "../kernel/platform.h"
-
 #define FONT                    vgafont8
 #define BIT_SHIFT               (7 - s_bit_no)
 
@@ -147,11 +145,8 @@ static unsigned char vgafont8[128 * 8]= {
 extern "C" {
 #endif
 
-extern void sdl_audio_dma_irq();
-
 __attribute__ ((interrupt ("IRQ"))) void interrupt_irq() {
-    if ((IRQ->irq1Pending & INTERRUPT_DMA0) != 0)
-        sdl_audio_dma_irq();
+    SDL_Interrupt_Handler();
 }
 
 #if defined(__cplusplus)

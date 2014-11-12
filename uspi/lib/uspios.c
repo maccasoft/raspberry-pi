@@ -1,8 +1,10 @@
 //
-// synchronize.cpp
+// uspios.c
 //
-// Circle - A C++ bare metal environment for Raspberry Pi
+// USPi - An USB driver for Raspberry Pi written in C
 // Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+//
+// External dependencies made by Marco Maccaferri <macca@maccasoft.com>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by

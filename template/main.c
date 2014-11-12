@@ -235,23 +235,24 @@ static void put_key(unsigned short key) {
     keybufferAvailable++;
 }
 
-static void USPiKeyStatusHandlerRaw (unsigned char ucModifiers, const unsigned char *pRawKeys) {
+static void USPiKeyStatusHandlerRaw (unsigned char ucModifiers, const unsigned char RawKeys[6]) {
     static int keydown[MAX_KEYS] = { 0, 0, 0, 0, 0, 0 };
-    const unsigned char *ptr;
+    int i, index;
+    short key;
 
-    ptr = pRawKeys;
-    while (*ptr) {
-        short key = *ptr++;
-        for (int i = 0; i < MAX_KEYS; i++) {
+    for (index = 0; index < MAX_KEYS; index++) {
+        key = RawKeys[index];
+        if (key < 4) { // Invalid key code
+            continue;
+        }
+        for (i = 0; i < MAX_KEYS; i++) {
             if (key == keydown[i]) {
-                key = 0;
                 break;
             }
         }
-        if (key != 0) {
+        if (i >= MAX_KEYS) {
             for (int i = 0; i < MAX_KEYS; i++) {
                 if (keydown[i] == 0) {
-                    keydown[i] = key;
                     if ((ucModifiers & (LSHIFT | RSHIFT)) != 0) {
                         if (key >= sizeof(keyShift_it)) {
                             put_key(key);
@@ -264,22 +265,21 @@ static void USPiKeyStatusHandlerRaw (unsigned char ucModifiers, const unsigned c
                         }
                         put_key(keyNormal_it[key] != 0 ? keyNormal_it[key] : SWAP_BYTES(key));
                     }
+                    keydown[i] = key;
                     break;
                 }
             }
         }
     }
 
-    for (int i = 0; i < MAX_KEYS; i++) {
-        short key = keydown[i];
+    for (i = 0; i < MAX_KEYS; i++) {
+        key = keydown[i];
         if (key != 0) {
-            ptr = pRawKeys;
-            while (*ptr) {
-                if (*ptr == key)
+            for (index = 0; index < MAX_KEYS; index++) {
+                if (RawKeys[index] == key)
                     break;
-                ptr++;
             }
-            if (*ptr == '\0') {
+            if (index >= MAX_KEYS) {
                 keydown[i] = 0;
             }
         }
@@ -366,11 +366,13 @@ void main() {
                 case KEY_PGUP:
                     move(0, 0);
                     break;
+                case '\r':
+                    addch(c);
+                    addch('\n');
+                    break;
                 default:
-                    if (c > 0 && c < 0x7F) {
+                    if (c >= 32 && c < 0x7F) {
                         addch(c);
-                        if (c == '\r')
-                            addch('\n');
                     }
                     break;
             }

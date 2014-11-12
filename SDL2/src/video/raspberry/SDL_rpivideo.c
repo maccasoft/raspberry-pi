@@ -49,7 +49,7 @@
 
 #define MAX_KEYS        6
 
-static int keydown[MAX_KEYS] = { 0, 0, 0, 0, 0, 0 };
+static unsigned char keydown[MAX_KEYS] = { 0, 0, 0, 0, 0, 0 };
 static unsigned char old_modifiers;
 #endif // HAVE_USPI
 
@@ -111,8 +111,9 @@ RASPBERRY_DeleteDevice(SDL_VideoDevice * device)
 
 #ifdef HAVE_USPI
 static void
-RASPBERRY_USPiKeyStatusHandlerRaw (unsigned char ucModifiers, const unsigned char *pRawKeys) {
-    const unsigned char *ptr;
+RASPBERRY_USPiKeyStatusHandlerRaw (unsigned char ucModifiers, const unsigned char RawKeys[6]) {
+    int i, index;
+    unsigned char key;
 
     if ((old_modifiers & LSHIFT) != (ucModifiers & LSHIFT)) {
         SDL_SendKeyboardKey((ucModifiers & LSHIFT) != 0 ? SDL_PRESSED : SDL_RELEASED, SDL_SCANCODE_LSHIFT);
@@ -141,17 +142,18 @@ RASPBERRY_USPiKeyStatusHandlerRaw (unsigned char ucModifiers, const unsigned cha
 
     old_modifiers = ucModifiers;
 
-    ptr = pRawKeys;
-    while (*ptr) {
-        short key = *ptr++;
-        for (int i = 0; i < MAX_KEYS; i++) {
+    for (index = 0; index < MAX_KEYS; index++) {
+        key = RawKeys[index];
+        if (key < 4) { // Invalid key code
+            continue;
+        }
+        for (i = 0; i < MAX_KEYS; i++) {
             if (key == keydown[i]) {
-                key = 0;
                 break;
             }
         }
-        if (key != 0) {
-            for (int i = 0; i < MAX_KEYS; i++) {
+        if (i >= MAX_KEYS) {
+            for (i = 0; i < MAX_KEYS; i++) {
                 if (keydown[i] == 0) {
                     SDL_SendKeyboardKey(SDL_PRESSED, key);
                     keydown[i] = key;
@@ -161,16 +163,14 @@ RASPBERRY_USPiKeyStatusHandlerRaw (unsigned char ucModifiers, const unsigned cha
         }
     }
 
-    for (int i = 0; i < MAX_KEYS; i++) {
-        short key = keydown[i];
+    for (i = 0; i < MAX_KEYS; i++) {
+        key = keydown[i];
         if (key != 0) {
-            ptr = pRawKeys;
-            while (*ptr) {
-                if (*ptr == key)
+            for (index = 0; index < MAX_KEYS; index++) {
+                if (RawKeys[index] == key)
                     break;
-                ptr++;
             }
-            if (*ptr == '\0') {
+            if (index >= MAX_KEYS) {
                 SDL_SendKeyboardKey(SDL_RELEASED, key);
                 keydown[i] = 0;
             }

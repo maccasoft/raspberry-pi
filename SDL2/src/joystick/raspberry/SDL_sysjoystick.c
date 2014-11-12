@@ -164,31 +164,31 @@ SDL_SYS_JoystickUpdate(SDL_Joystick * joystick)
     /* set clock and latch to 1 */
     Raspberry_digitalWrite(JOY_LCH, 1);
     Raspberry_digitalWrite(JOY_CLK, 1);
-    usleep(100);
+    usleep(50);
 
     /* set latch to 0 */
     Raspberry_digitalWrite(JOY_LCH, 0);
-    usleep(100);
+    usleep(50);
 
     /* set latch to 1 and clock to 0 */
     Raspberry_digitalWrite(JOY_LCH, 1);
     Raspberry_digitalWrite(JOY_CLK, 0);
-    usleep(100);
+    usleep(50);
 
 #else
 
     /* set clock and latch to 0 */
     Raspberry_digitalWrite(JOY_LCH, 0);
     Raspberry_digitalWrite(JOY_CLK, 0);
-    usleep(100);
+    usleep(50);
 
     /* set latch to 1 */
     Raspberry_digitalWrite(JOY_LCH, 1);
-    usleep(100);
+    usleep(50);
 
     /* set latch to 0 */
     Raspberry_digitalWrite(JOY_LCH, 0);
-    usleep(100);
+    usleep(50);
 
 #endif // HAVE_NES_SN74165
 
@@ -204,9 +204,9 @@ SDL_SYS_JoystickUpdate(SDL_Joystick * joystick)
             nes_bits |= 0x00000100;
 
         Raspberry_digitalWrite(JOY_CLK, 1);
-        usleep(100);
+        usleep(50);
         Raspberry_digitalWrite(JOY_CLK, 0);
-        usleep(100);
+        usleep(50);
     }
 
     uint32_t mask = 1;

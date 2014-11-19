@@ -49,6 +49,15 @@
 #define MAIL_TAGS     0x8 // Mailbox Channel 8: Tags (ARM to VC)
 
 #define TAG_GET_BOARD_REVISION  0x00010002 // Hardware: Get Board Revision (Response: Board Revision)
+#define TAG_SET_POWER_STATE     0x00028001 // Power: Set Power State (Response: Device ID, State)
+
+#define POWER_STATE_OFF     (0 << 0)
+#define POWER_STATE_ON      (1 << 0)
+
+//
+// Power: Unique Device ID's
+//
+#define PWR_USB_HCD_ID  0x3 // USB HCD
 
 //
 // System Timers
@@ -204,13 +213,27 @@ int GetBoardRevision (void)
 
 int SetPowerStateOn (unsigned nDeviceId)
 {
-    mbox_write(0, 0x80);
-    if(mbox_read(0) != 0x80)
-    {
-        return 0;
+    unsigned int mb_addr = 0x40007000;      // 0x7000 in L2 cache coherent mode
+    volatile unsigned int *mailbuffer = (unsigned int *) mb_addr;
+
+    mailbuffer[0] = 8 * 4;              // size of this message
+    mailbuffer[1] = 0;                  // this is a request
+
+    mailbuffer[2] = TAG_SET_POWER_STATE;
+    mailbuffer[3] = 8;                  // value buffer size
+    mailbuffer[4] = 8;                  // request/response
+    mailbuffer[5] = PWR_USB_HCD_ID;     // device id
+    mailbuffer[6] = POWER_STATE_ON;     // power state
+
+    mailbuffer[7] = 0;
+    mbox_write(MAIL_TAGS, mb_addr);
+
+    mbox_read(MAIL_TAGS);
+    if (mailbuffer[1] == MAIL_FULL) {
+        return 1;
     }
 
-    return 1;
+    return 0;
 }
 
 int GetMACAddress (unsigned char Buffer[6])

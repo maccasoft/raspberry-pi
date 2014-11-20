@@ -63,7 +63,7 @@ void USPiKeyboardRegisterKeyStatusHandlerRaw (TUSPiKeyStatusHandlerRaw *pKeyStat
 // ucModifiers (bit is set if modifier key is pressed)
 #define LCTRL		(1 << 0)
 #define LSHIFT		(1 << 1)
-#define ALT		(1 << 2)
+#define ALT		    (1 << 2)
 #define LWIN		(1 << 3)
 #define RCTRL		(1 << 4)
 #define RSHIFT		(1 << 5)
@@ -106,6 +106,48 @@ int USPiSendFrame (const void *pBuffer, unsigned nLength);
 // returns 0 on failure
 #define USPI_FRAME_BUFFER_SIZE	1600
 int USPiReceiveFrame (void *pBuffer, unsigned *pResultLength);
+
+//
+// GamePad device
+//
+
+// returns != 0 if available
+int USPiGamePadAvailable (void);
+
+#define MAX_AXIS    6
+
+#define FLAG_X      0x0001
+#define FLAG_Y      0x0002
+#define FLAG_Z      0x0004
+#define FLAG_RX     0x0008
+#define FLAG_RY     0x0010
+#define FLAG_RZ     0x0020
+
+typedef struct USPiGamePadState {
+    unsigned short idVendor;
+    unsigned short idProduct;
+    unsigned short idVersion;
+
+    unsigned int flags;
+
+    int x;
+    int y;
+    int z;
+    int rx;
+    int ry;
+    int rz;
+    int minimum;
+    int maximum;
+
+    int nbuttons;
+    unsigned int buttons;
+}
+USPiGamePadState;
+
+const USPiGamePadState *USPiGamePadGetStatus (void);
+
+typedef void TGamePadStatusHandler (const USPiGamePadState *pGamePadState);
+void USPiGamePadRegisterStatusHandler (TGamePadStatusHandler *pStatusHandler);
 
 #ifdef __cplusplus
 }

@@ -50,6 +50,7 @@ OBJS = \
 	lib/usbdevice.o \
 	lib/usbdevicefactory.o \
 	lib/usbendpoint.o \
+	lib/usbgamepad.o \
 	lib/usbkeyboard.o \
 	lib/usbmassdevice.o \
 	lib/usbrequest.o \

@@ -3,7 +3,7 @@
 //
 // USPi - An USB driver for Raspberry Pi written in C
 // Copyright (C) 2014  R. Stange <rsta2@o2online.de>
-// 
+//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -24,6 +24,7 @@
 // for factory
 #include <uspi/usbstandardhub.h>
 #include <uspi/usbmassdevice.h>
+#include <uspi/usbgamepad.h>
 #include <uspi/usbkeyboard.h>
 #include <uspi/smsc951x.h>
 
@@ -50,7 +51,7 @@ TUSBDevice *GetDevice (TUSBDevice *pParent, TString *pName)
 {
 	assert (pParent != 0);
 	assert (pName != 0);
-	
+
 	TUSBDevice *pResult = 0;
 
 	if (StringCompare (pName, "dev9-0-2") == 0)
@@ -81,15 +82,22 @@ TUSBDevice *GetDevice (TUSBDevice *pParent, TString *pName)
 		SMSC951xDevice (pDevice, pParent);
 		pResult = (TUSBDevice *) pDevice;
 	}
+    else if (StringCompare (pName, "int3-0-0") == 0)
+    {
+        TUSBGamePadDevice *pDevice = (TUSBGamePadDevice *) malloc (sizeof (TUSBGamePadDevice));
+        assert (pDevice != 0);
+        USBGamePadDevice (pDevice, pParent);
+        pResult = (TUSBDevice *) pDevice;
+    }
 	// new devices follow
 
 	if (pResult != 0)
 	{
 		LogWrite ("usbdev", LOG_NOTICE, "Using device %s", StringGet (pName));
 	}
-	
+
 	_String (pName);
 	free (pName);
-	
+
 	return pResult;
 }

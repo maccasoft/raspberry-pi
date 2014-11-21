@@ -3,7 +3,7 @@
 //
 // USPi - An USB driver for Raspberry Pi written in C
 // Copyright (C) 2014  R. Stange <rsta2@o2online.de>
-//
+// 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -23,35 +23,17 @@
 #include <uspi/macros.h>
 #include <uspi/assert.h>
 
-boolean USBStandardHubConfigure2 (TUSBDevice *pUSBDevice);
 boolean USBStandardHubEnumeratePorts (TUSBStandardHub *pThis);
-TString *USBStandardHubGetDeviceNames (TUSBDevice *pDevice);
 
 static const char FromHub[] = "usbhub";
 
-void USBStandardHub (TUSBStandardHub *pThis, TUSBHostController *pHost, TUSBSpeed Speed)
-{
-	assert (pThis != 0);
-
-	USBDevice (&pThis->m_USBDevice, pHost, Speed, 0, 1),
-
-	pThis->m_pHubDesc = 0;
-	pThis->m_nPorts = 0;
-
-	for (unsigned nPort = 0; nPort < USB_HUB_MAX_PORTS; nPort++)
-	{
-		pThis->m_pDevice[nPort] = 0;
-		pThis->m_pStatus[nPort] = 0;
-	}
-}
-
-void USBStandardHub2 (TUSBStandardHub *pThis, TUSBDevice *pDevice)
+void USBStandardHub (TUSBStandardHub *pThis, TUSBDevice *pDevice)
 {
 	assert (pThis != 0);
 
 	USBDeviceCopy (&pThis->m_USBDevice, pDevice);
-    pThis->m_USBDevice.Configure = USBStandardHubConfigure2;
-
+	pThis->m_USBDevice.Configure = USBStandardHubConfigure;
+	
 	pThis->m_pHubDesc = 0;
 	pThis->m_nPorts = 0;
 
@@ -93,27 +75,15 @@ void _USBStandardHub (TUSBStandardHub *pThis)
 	_USBDevice (&pThis->m_USBDevice);
 }
 
-boolean USBStandardHubConfigure2 (TUSBDevice *pUSBDevice)
-{
-    TUSBStandardHub *pThis = (TUSBStandardHub *) pUSBDevice;
-    assert (pThis != 0);
-
-    if (!USBStandardHubInitialize (pThis))
-    {
-        return 0;
-    }
-
-    return USBStandardHubConfigure (pThis);
-}
-
 boolean USBStandardHubInitialize (TUSBStandardHub *pThis)
 {
 	assert (pThis != 0);
 	return USBDeviceInitialize (&pThis->m_USBDevice);
 }
 
-boolean USBStandardHubConfigure (TUSBStandardHub *pThis)
+boolean USBStandardHubConfigure (TUSBDevice *pUSBDevice)
 {
+	TUSBStandardHub *pThis = (TUSBStandardHub *) pUSBDevice;
 	assert (pThis != 0);
 
 	const TUSBDeviceDescriptor *pDeviceDesc = USBDeviceGetDeviceDescriptor (&pThis->m_USBDevice);
@@ -187,7 +157,7 @@ boolean USBStandardHubConfigure (TUSBStandardHub *pThis)
 
 	TUSBHostController *pHost = USBDeviceGetHost (&pThis->m_USBDevice);
 	assert (pHost != 0);
-
+	
 	if (DWHCIDeviceControlMessage (pHost, USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
 					REQUEST_OUT | REQUEST_TO_INTERFACE, SET_INTERFACE,
 					pInterfaceDesc->bAlternateSetting,
@@ -209,10 +179,10 @@ boolean USBStandardHubConfigure (TUSBStandardHub *pThis)
 	   != (int) sizeof *pThis->m_pHubDesc)
 	{
 		LogWrite (FromHub, LOG_ERROR, "Cannot get hub descriptor");
-
+		
 		free (pThis->m_pHubDesc);
 		pThis->m_pHubDesc = 0;
-
+		
 		return FALSE;
 	}
 
@@ -224,10 +194,10 @@ boolean USBStandardHubConfigure (TUSBStandardHub *pThis)
 	if (pThis->m_nPorts > USB_HUB_MAX_PORTS)
 	{
 		LogWrite (FromHub, LOG_ERROR, "Too many ports (%u)", pThis->m_nPorts);
-
+		
 		free (pThis->m_pHubDesc);
 		pThis->m_pHubDesc = 0;
-
+		
 		return FALSE;
 	}
 
@@ -247,7 +217,7 @@ boolean USBStandardHubEnumeratePorts (TUSBStandardHub *pThis)
 
 	TUSBHostController *pHost = USBDeviceGetHost (&pThis->m_USBDevice);
 	assert (pHost != 0);
-
+	
 	TUSBEndpoint *pEndpoint0 = USBDeviceGetEndpoint0 (&pThis->m_USBDevice);
 	assert (pEndpoint0 != 0);
 
@@ -302,7 +272,7 @@ boolean USBStandardHubEnumeratePorts (TUSBStandardHub *pThis)
 		}
 
 		MsDelay (100);
-
+		
 		if (DWHCIDeviceControlMessage (pHost, pEndpoint0,
 			REQUEST_IN | REQUEST_CLASS | REQUEST_TO_OTHER,
 			GET_STATUS, 0, nPort+1, pThis->m_pStatus[nPort], 4) != 4)
@@ -311,7 +281,7 @@ boolean USBStandardHubEnumeratePorts (TUSBStandardHub *pThis)
 		}
 
 		//LogWrite (FromHub, LOG_DEBUG, "Port %u status is 0x%04X", nPort+1, (unsigned) pThis->m_pStatus[nPort]->wPortStatus);
-
+		
 		if (!(pThis->m_pStatus[nPort]->wPortStatus & PORT_ENABLE__MASK))
 		{
 			LogWrite (FromHub, LOG_ERROR, "Port %u is not enabled", nPort+1);
@@ -391,13 +361,13 @@ boolean USBStandardHubEnumeratePorts (TUSBStandardHub *pThis)
 
 				continue;
 			}
-
+			
 			LogWrite (FromHub, LOG_DEBUG, "Port %u: Device configured", nPort+1);
 		}
 		else
 		{
 			LogWrite (FromHub, LOG_NOTICE, "Port %u: Device is not supported", nPort+1);
-
+			
 			_USBDevice (pThis->m_pDevice[nPort]);
 			free (pThis->m_pDevice[nPort]);
 			pThis->m_pDevice[nPort] = 0;
@@ -467,7 +437,7 @@ boolean USBStandardHubEnumeratePorts (TUSBStandardHub *pThis)
 TString *USBStandardHubGetDeviceNames (TUSBDevice *pDevice)
 {
 	assert (pDevice != 0);
-
+	
 	TString *pResult = (TString *) malloc (sizeof (TString));
 	assert (pResult != 0);
 	String (pResult);

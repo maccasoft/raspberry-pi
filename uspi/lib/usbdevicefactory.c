@@ -3,7 +3,7 @@
 //
 // USPi - An USB driver for Raspberry Pi written in C
 // Copyright (C) 2014  R. Stange <rsta2@o2online.de>
-//
+// 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -24,8 +24,9 @@
 // for factory
 #include <uspi/usbstandardhub.h>
 #include <uspi/usbmassdevice.h>
-#include <uspi/usbgamepad.h>
 #include <uspi/usbkeyboard.h>
+#include <uspi/usbmouse.h>
+#include <uspi/usbgamepad.h>
 #include <uspi/smsc951x.h>
 
 TUSBDevice *GetDevice (TUSBDevice *pParent, TString *pName);
@@ -51,14 +52,14 @@ TUSBDevice *GetDevice (TUSBDevice *pParent, TString *pName)
 {
 	assert (pParent != 0);
 	assert (pName != 0);
-
+	
 	TUSBDevice *pResult = 0;
 
 	if (StringCompare (pName, "dev9-0-2") == 0)
 	{
 		TUSBStandardHub *pDevice = (TUSBStandardHub *) malloc (sizeof (TUSBStandardHub));
 		assert (pDevice != 0);
-		USBStandardHub2 (pDevice, pParent);
+		USBStandardHub (pDevice, pParent);
 		pResult = (TUSBDevice *) pDevice;
 	}
 	else if (StringCompare (pName, "int8-6-50") == 0)
@@ -73,6 +74,13 @@ TUSBDevice *GetDevice (TUSBDevice *pParent, TString *pName)
 		TUSBKeyboardDevice *pDevice = (TUSBKeyboardDevice *) malloc (sizeof (TUSBKeyboardDevice));
 		assert (pDevice != 0);
 		USBKeyboardDevice (pDevice, pParent);
+		pResult = (TUSBDevice *) pDevice;
+	}
+	else if (StringCompare (pName, "int3-1-2") == 0)
+	{
+		TUSBMouseDevice *pDevice = (TUSBMouseDevice *) malloc (sizeof (TUSBMouseDevice));
+		assert (pDevice != 0);
+		USBMouseDevice (pDevice, pParent);
 		pResult = (TUSBDevice *) pDevice;
 	}
 	else if (StringCompare (pName, "ven424-ec00") == 0)
@@ -95,9 +103,9 @@ TUSBDevice *GetDevice (TUSBDevice *pParent, TString *pName)
 	{
 		LogWrite ("usbdev", LOG_NOTICE, "Using device %s", StringGet (pName));
 	}
-
+	
 	_String (pName);
 	free (pName);
-
+	
 	return pResult;
 }

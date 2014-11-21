@@ -41,6 +41,7 @@ OBJS = \
 	lib/dwhciframeschednper.o \
 	lib/dwhciframeschedper.o \
 	lib/dwhciregister.o \
+	lib/dwhcirootport.o \
 	lib/dwhcixferstagedata.o \
 	lib/keymap.o \
 	lib/macaddress.o \
@@ -53,6 +54,7 @@ OBJS = \
 	lib/usbgamepad.o \
 	lib/usbkeyboard.o \
 	lib/usbmassdevice.o \
+	lib/usbmouse.o \
 	lib/usbrequest.o \
 	lib/usbstandardhub.o \
 	lib/uspilibrary.o \

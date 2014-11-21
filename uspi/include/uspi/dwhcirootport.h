@@ -1,5 +1,5 @@
 //
-// types.h
+// dwhcirootport.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
 // Copyright (C) 2014  R. Stange <rsta2@o2online.de>
@@ -17,23 +17,33 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-#ifndef _uspi_types_h
-#define _uspi_types_h
+#ifndef _uspi_dwhcirootport_h
+#define _uspi_dwhcirootport_h
 
-typedef unsigned char		u8;
-typedef unsigned short		u16;
-typedef unsigned int		u32;
-typedef unsigned long long	u64;
+#include <uspi/usbdevice.h>
+#include <uspi/types.h>
 
-typedef char                s8;
-typedef short               s16;
-typedef int                 s32;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-typedef int		boolean;
-#define FALSE		0
-#define TRUE		1
+struct TDWHCIDevice;
 
-typedef unsigned long	size_t;
-typedef long		ssize_t;
+typedef struct TDWHCIRootPort
+{
+	struct TDWHCIDevice *m_pHost;
+
+	TUSBDevice *m_pDevice;
+}
+TDWHCIRootPort;
+
+void DWHCIRootPort (TDWHCIRootPort *pThis, struct TDWHCIDevice *pHost);
+void _DWHCIRootPort (TDWHCIRootPort *pThis);
+
+boolean DWHCIRootPortInitialize (TDWHCIRootPort *pThis);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

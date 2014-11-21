@@ -3,7 +3,7 @@
 //
 // USPi - An USB driver for Raspberry Pi written in C
 // Copyright (C) 2014  R. Stange <rsta2@o2online.de>
-//
+// 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -69,5 +69,10 @@ PACKED TUSBHIDDescriptor;
 #define LED_NUM_LOCK	(1 << 0)
 #define LED_CAPS_LOCK	(1 << 1)
 #define LED_SCROLL_LOCK	(1 << 2)
+
+// Mouse buttons (boot protocol)
+#define USBHID_BUTTON1	(1 << 0)
+#define USBHID_BUTTON2	(1 << 1)
+#define USBHID_BUTTON3	(1 << 2)
 
 #endif

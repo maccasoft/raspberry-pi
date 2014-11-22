@@ -24,6 +24,7 @@ OBJS = \
 	../kernel/start.o \
 	../kernel/syscalls.o \
 	../kernel/platform.o \
+	../kernel/wiring.o \
 	main.o
 
 -include $(DEPDIR)/*.Po

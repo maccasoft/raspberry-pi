@@ -4,6 +4,9 @@
 
 #include <SDL.h>
 
+#include "../kernel/platform.h"
+#include "../kernel/wiring.h"
+
 #define FONT                    vgafont8
 #define BIT_SHIFT               (7 - s_bit_no)
 
@@ -141,6 +144,26 @@ static unsigned char vgafont8[128 * 8]= {
     0x00, 0x10, 0x38, 0x6c, 0xc6, 0xc6, 0xfe, 0x00,
 };
 
+static unsigned char keyNormal_it[] = {
+    0x0, 0x0, 0x0, 0x0, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
+    'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '1', '2',
+    '3', '4', '5', '6', '7', '8', '9', '0', '\r', 0x0, '\b', '\t', ' ', '\'', 0x0, 0x0,
+    '+', '<', 0x0, 0x0, 0x0, '\\', ',', '.', '-', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+    0x0, 0x0, 0x0, 0x0, '/', '*', '-', '+', '\r', '1', '2', '3', '4', '5', '6', '7',
+    '8', '9', '0', '.', '<', 0x0, 0x0, '='
+};
+
+static unsigned char keyShift_it[] = {
+    0x0, 0x0, 0x0, 0x0, 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+    'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '"',
+    0x0, '$', '%', '&', '/', '(', ')', '=', '\r', 0x0, '\b', '\t', ' ', '?', '^', 0x0,
+    '*', '>', 0x0, 0x0, 0x0, '|', ';', ':', '_', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+    0x0, 0x0, 0x0, 0x0, '/', '*', '-', '+', '\r', '1', '2', '3', '4', '5', '6', '7',
+    '8', '9', '0', '.', '>', 0x0, 0x0, '='
+};
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -153,35 +176,186 @@ __attribute__ ((interrupt ("IRQ"))) void interrupt_irq() {
 }
 #endif
 
+struct _screen {
+    unsigned char c;
+    struct {
+        unsigned char r;
+        unsigned char g;
+        unsigned char b;
+    } fore;
+    struct {
+        unsigned char r;
+        unsigned char g;
+        unsigned char b;
+    } back;
+};
+
+#define txt_width  40
+#define txt_height 25
+
 static int cur_x;
 static int cur_y;
+static int cursor_visible;
+static struct _screen screen[txt_width * txt_height];
+static SDL_Rect crect;
 
-void SDL_DrawChar(SDL_Renderer *renderer, int c) {
-    int s_offset = (int) c * CHAR_W * CHAR_H;
-    int x = cur_x * CHAR_W;
-    int y = cur_y * CHAR_H;
+void SDL_DrawString(const char *s) {
+    char c;
 
-    for (int c_y = 0; c_y < CHAR_H; c_y++) {
-        for (int c_x = 0; c_x < CHAR_W; c_x++) {
-            int s_byte_no = s_offset / 8;
-            int s_bit_no = s_offset % 8;
+    while (*s) {
+        c = *s++;
+        if (c == '\r') {
+            cur_x = 0;
+        }
+        else if (c == '\n') {
+            cur_y++;
+            if (cur_y >= txt_height) {
+                memcpy(&screen[0], &screen[txt_width], sizeof(screen) - sizeof(struct _screen) * txt_width);
+                for (int i = txt_width * (txt_height - 1); i < txt_width * txt_height; i++) {
+                    screen[i].c = ' ';
+                    screen[i].fore.r = 255;
+                    screen[i].fore.g = 255;
+                    screen[i].fore.b = 255;
+                    screen[i].back.r = 98;
+                    screen[i].back.g = 0;
+                    screen[i].back.b = 32;
+                }
+                cur_y--;
+            }
+        }
+        else {
+            screen[cur_y * txt_width + cur_x].c = c;
+            cur_x++;
+            if (cur_x >= txt_width) {
+                cur_x = 0;
+                cur_y++;
+                if (cur_y >= txt_height) {
+                    memcpy(&screen[0], &screen[txt_width], sizeof(screen) - sizeof(struct _screen) * txt_width);
+                    for (int i = txt_width * (txt_height - 1); i < txt_width * txt_height; i++) {
+                        screen[i].c = ' ';
+                        screen[i].fore.r = 255;
+                        screen[i].fore.g = 255;
+                        screen[i].fore.b = 255;
+                        screen[i].back.r = 98;
+                        screen[i].back.g = 0;
+                        screen[i].back.b = 32;
+                    }
+                    cur_y--;
+                }
+            }
+        }
+    }
+    cursor_visible = 1;
+}
 
-            unsigned char s_byte = FONT[s_byte_no];
-            if ((s_byte >> BIT_SHIFT) & 0x1)
-                SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-            else
-                SDL_SetRenderDrawColor(renderer, 98, 0, 32, 255);
-            SDL_RenderDrawPoint(renderer, x + c_x, y + c_y);
-            s_offset++;
+void SDL_DrawStringAt(int y, int x, const char *s) {
+    cur_x = x % txt_width;
+    cur_y = y % txt_height;
+    SDL_DrawString(s);
+}
+
+void SDL_DrawChar(char c) {
+    if (c == '\r') {
+        cur_x = 0;
+    }
+    else if (c == '\n') {
+        cur_y++;
+        if (cur_y >= txt_height) {
+            memcpy(&screen[0], &screen[txt_width], sizeof(screen) - sizeof(struct _screen) * txt_width);
+            for (int i = txt_width * (txt_height - 1); i < txt_width * txt_height; i++) {
+                screen[i].c = ' ';
+                screen[i].fore.r = 255;
+                screen[i].fore.g = 255;
+                screen[i].fore.b = 255;
+                screen[i].back.r = 98;
+                screen[i].back.g = 0;
+                screen[i].back.b = 32;
+            }
+            cur_y--;
+        }
+    }
+    else {
+        screen[cur_y * txt_width + cur_x].c = c;
+        cur_x++;
+        if (cur_x >= txt_width) {
+            cur_x = 0;
+            cur_y++;
+            if (cur_y >= txt_height) {
+                memcpy(&screen[0], &screen[txt_width], sizeof(screen) - sizeof(struct _screen) * txt_width);
+                for (int i = txt_width * (txt_height - 1); i < txt_width * txt_height; i++) {
+                    screen[i].c = ' ';
+                    screen[i].fore.r = 255;
+                    screen[i].fore.g = 255;
+                    screen[i].fore.b = 255;
+                    screen[i].back.r = 98;
+                    screen[i].back.g = 0;
+                    screen[i].back.b = 32;
+                }
+                cur_y--;
+            }
+        }
+    }
+    cursor_visible = 1;
+}
+
+void SDL_DrawCharAt(int y, int x, char c) {
+    cur_x = x % txt_width;
+    cur_y = y % txt_height;
+    SDL_DrawChar(c);
+}
+
+void SDL_InitConsole(int w, int h) {
+    crect.x = (w - txt_width * CHAR_W) / 2;
+    crect.y = (h - txt_height * CHAR_H) / 2;
+    crect.w = txt_width * CHAR_W;
+    crect.h = txt_height * CHAR_H;
+
+    for (int i = 0; i < txt_width * txt_height; i++) {
+        screen[i].c = ' ';
+        screen[i].fore.r = 255;
+        screen[i].fore.g = 255;
+        screen[i].fore.b = 255;
+        screen[i].back.r = 98;
+        screen[i].back.g = 0;
+        screen[i].back.b = 32;
+    }
+
+    cur_x = 0;
+    cur_y = 0;
+}
+
+void SDL_RenderConsole(SDL_Renderer *renderer) {
+    int x, y, c_x;
+    int index = 0;
+
+    for (y = crect.y; index < txt_width * txt_height; y += CHAR_H) {
+        for (c_x = 0, x = crect.x; c_x < txt_width && index < txt_width * txt_height; index++, c_x++, x += CHAR_W) {
+            int s_offset = (int) screen[index].c * CHAR_W * CHAR_H;
+            for (int f_y = 0; f_y < CHAR_H; f_y++) {
+                for (int f_x = 0; f_x < CHAR_W; f_x++) {
+                    int s_byte_no = s_offset / 8;
+                    int s_bit_no = s_offset % 8;
+
+                    unsigned char s_byte = FONT[s_byte_no];
+                    if ((s_byte >> BIT_SHIFT) & 0x1)
+                        SDL_SetRenderDrawColor(renderer, screen[index].fore.r, screen[index].fore.g, screen[index].fore.b, 255);
+                    else
+                        SDL_SetRenderDrawColor(renderer, screen[index].back.r, screen[index].back.g, screen[index].back.b, 255);
+                    SDL_RenderDrawPoint(renderer, x + f_x, y + f_y);
+                    s_offset++;
+                }
+            }
         }
     }
 
-    cur_x++;
-}
-
-void SDL_DrawString(SDL_Renderer *renderer, const char *s) {
-    while (*s) {
-        SDL_DrawChar(renderer, *s++);
+    if (cursor_visible) {
+        SDL_Rect rect;
+        rect.x = crect.x + cur_x * CHAR_W;
+        rect.y = crect.y + cur_y * CHAR_H;
+        rect.w = CHAR_W;
+        rect.h = CHAR_H;
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        SDL_RenderFillRect(renderer, &rect);
     }
 }
 
@@ -189,27 +363,94 @@ void main() {
     int w, h;
     SDL_Window *screen;
     SDL_Renderer *renderer;
+    SDL_Event event;
+    struct timer_wait tw;
+    int led_status = LOW;
+
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS);
 
     // Default screen resolution (set in config.txt or auto-detected)
     //SDL_CreateWindowAndRenderer(0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP, &screen, &renderer);
 
     // Sets a specific screen resolution
-    SDL_CreateWindowAndRenderer(320, 200, SDL_WINDOW_FULLSCREEN, &screen, &renderer);
+    SDL_CreateWindowAndRenderer(32 + 320 + 32, 32 + 200 + 32, SDL_WINDOW_FULLSCREEN, &screen, &renderer);
 
     SDL_GetWindowSize(screen, &w, &h);
+    SDL_InitConsole(w, h);
 
-    SDL_SetRenderDrawColor(renderer, 98, 0, 32, 255);
-    SDL_RenderClear(renderer);
+    SDL_DrawStringAt(1, (txt_width - 22) / 2, "**** RASPBERRY-PI ****");
+    SDL_DrawStringAt(3, (txt_width - 30) / 2, "BARE-METAL SDL SYSTEM TEMPLATE\r\n");
 
-    cur_y = 1;
-    cur_x = ((w / CHAR_W) - 22) / 2;
-    SDL_DrawString(renderer, "**** RASPBERRY-PI ****");
-    cur_y = 3;
-    cur_x = ((w / CHAR_W) - 30) / 2;
-    SDL_DrawString(renderer, "BARE-METAL SDL SYSTEM TEMPLATE");
+    pinMode(16, OUTPUT);
+    register_timer(&tw, 250000);
 
-    SDL_RenderPresent(renderer);
+    SDL_DrawString("\r\nREADY\r\n");
 
     while(1) {
+        while (SDL_PollEvent(&event)) {
+            if (event.type == SDL_KEYDOWN) {
+                switch(event.key.keysym.scancode) {
+                    case SDL_SCANCODE_UP:
+                        if (cur_y > 0)
+                            cur_y--;
+                        break;
+                    case SDL_SCANCODE_DOWN:
+                        if (cur_y < txt_height - 1)
+                            cur_y++;
+                        break;
+                    case SDL_SCANCODE_LEFT:
+                        if (cur_x > 0)
+                            cur_x--;
+                        else if (cur_y > 0) {
+                            cur_y--;
+                            cur_x = txt_width - 1;
+                        }
+                        break;
+                    case SDL_SCANCODE_RIGHT:
+                        if (cur_x < txt_width - 1)
+                            cur_x++;
+                        else if (cur_y < txt_height - 1) {
+                            cur_y++;
+                            cur_x = 0;
+                        }
+                        break;
+                    case SDL_SCANCODE_HOME:
+                        cur_x = 0;
+                        break;
+                    case SDL_SCANCODE_END:
+                        cur_x = txt_width - 1;
+                        break;
+                    case SDL_SCANCODE_RETURN:
+                        SDL_DrawString("\r\n");
+                        break;
+                    default: {
+                        SDL_Keymod mod = SDL_GetModState();
+                        if ((mod & (KMOD_LSHIFT | KMOD_RSHIFT)) != 0) {
+                            char c = keyShift_it[event.key.keysym.scancode];
+                            if (c >= ' ')
+                                SDL_DrawChar(c);
+                        }
+                        else {
+                            char c = keyNormal_it[event.key.keysym.scancode];
+                            if (c >= ' ')
+                                SDL_DrawChar(c);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (compare_timer(&tw)) {
+            led_status = led_status == LOW ? HIGH : LOW;
+            digitalWrite(16, led_status);
+            cursor_visible = cursor_visible ? 0 : 1;
+        }
+
+        SDL_SetRenderDrawColor(renderer, 213, 41, 82, 255);
+        SDL_RenderClear(renderer);
+
+        SDL_RenderConsole(renderer);
+
+        SDL_RenderPresent(renderer);
     }
 }

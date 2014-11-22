@@ -71,6 +71,8 @@ static const char *s_ControllerMappings [] =
     "030000005e0400009102000007010000,X360 Wireless Controller,a:b0,b:b1,back:b6,dpdown:b14,dpleft:b11,dpright:b12,dpup:b13,guide:b8,leftshoulder:b4,leftstick:b9,lefttrigger:a2,leftx:a0,lefty:a1,rightshoulder:b5,rightstick:b10,righttrigger:a5,rightx:a3,righty:a4,start:b7,x:b2,y:b3,",
 #elif defined(__RASPBERRY_PI__)
     "4e45532047616d657061640000000000,NES Gamepad,a:b7,b:b6,dpdown:b2,dpleft:b1,dpright:b0,dpup:b3,guide:b5,start:b4,",
+    "03000000b50700001302000001010000,Mega World USB 2-Axis 8-Button Gamepad,a:b2,b:b0,x:b3,y:b1,leftshoulder:b4,lefttrigger:b5,rightshoulder:b6,righttrigger:b7,leftx:a0,lefty:a1",
+    "030000004c0500006802000000010000,MY-POWER CO.,LTD 2In1 USB Joystick,x:b7,a:b8,b:b9,y:b10,back:b11,start:b14,dpleft:b18,dpdown:b17,dpright:b16,dpup:b15,guide:b0,leftshoulder:b5,lefttrigger:b3,rightshoulder:b6,righttrigger:b4,leftx:a0,lefty:a1,rightx:a2,righty:a3",
 #endif
     NULL
 };

@@ -27,6 +27,41 @@
 #include "../SDL_joystick_c.h"
 
 #include "SDL_events.h"
+#include "SDL_endian.h"
+#include "SDL_assert.h"
+
+/* The private structure used to keep track of a joystick */
+struct joystick_hwdata
+{
+    struct SDL_joylist_item *item;
+    SDL_JoystickGUID guid;
+    int x;
+    int y;
+    int z;
+    int rx;
+    int ry;
+    int rz;
+    unsigned int buttons;
+};
+
+/* A linked list of available joysticks */
+typedef struct SDL_joylist_item
+{
+    int device_instance;
+    char *name;
+    SDL_JoystickGUID guid;
+    struct joystick_hwdata *hwdata;
+    struct SDL_joylist_item *next;
+
+    void (*open) (SDL_Joystick * joystick, int device_index);
+    void (*update) (SDL_Joystick * joystick);
+    void (*close) (SDL_Joystick * joystick);
+} SDL_joylist_item;
+
+static SDL_joylist_item *SDL_joylist = NULL;
+static SDL_joylist_item *SDL_joylist_tail = NULL;
+static int numjoysticks = 0;
+static int instance_counter = 0;
 
 #ifdef HAVE_NES
 #include "../../core/raspberry/SDL_raspberry.h"
@@ -54,109 +89,24 @@
 #define NES1_B          0x4000
 #define NES1_A          0x8000
 
-uint32_t old_nes_bits;
-
-#endif // HAVE_NES
-
-/* Function to scan the system for joysticks.
- * It should return 0, or -1 on an unrecoverable fatal error.
- */
-int
-SDL_SYS_JoystickInit(void)
+static void
+NES_JoystickOpen(SDL_Joystick * joystick, int device_index)
 {
-    return (0);
+    Raspberry_pinMode(JOY_CLK, 0);
+    Raspberry_pinMode(JOY_LCH, 0);
+    Raspberry_pinMode(JOY_DATAOUT0, 1);
+    Raspberry_pinMode(JOY_DATAOUT1, 1);
+
+    joystick->hwdata->buttons = 0xFF;
+
+    joystick->nbuttons = 8;
+    joystick->naxes = 0;
+    joystick->nhats = 0;
 }
 
-int SDL_SYS_NumJoysticks()
+static void
+NES_JoystickUpdate(SDL_Joystick * joystick)
 {
-    int num = 0;
-
-#ifdef HAVE_NES
-    num += 1;
-#endif // HAVE_NES
-
-    return num;
-}
-
-void SDL_SYS_JoystickDetect()
-{
-}
-
-SDL_bool SDL_SYS_JoystickNeedsPolling()
-{
-    return SDL_TRUE;
-}
-
-/* Function to get the device-dependent name of a joystick */
-const char *
-SDL_SYS_JoystickNameForDeviceIndex(int device_index)
-{
-    int num = 0;
-
-#ifdef HAVE_NES
-    if (device_index == num) {
-        return "NES Gamepad";
-    }
-    num++;
-#endif // HAVE_NES
-
-    SDL_SetError("Logic error: No joysticks available");
-    return (NULL);
-}
-
-/* Function to perform the mapping from device index to the instance id for this index */
-SDL_JoystickID SDL_SYS_GetInstanceIdOfDeviceIndex(int device_index)
-{
-    return device_index;
-}
-
-/* Function to open a joystick for use.
-   The joystick to open is specified by the index field of the joystick.
-   This should fill the nbuttons and naxes fields of the joystick structure.
-   It returns 0, or -1 if there is an error.
- */
-int
-SDL_SYS_JoystickOpen(SDL_Joystick * joystick, int device_index)
-{
-    int num = 0;
-
-#ifdef HAVE_NES
-    if (device_index == num) {
-        /* set I/Os pins */
-        Raspberry_pinMode(JOY_CLK, 0);
-        Raspberry_pinMode(JOY_LCH, 0);
-        Raspberry_pinMode(JOY_DATAOUT0, 1);
-        Raspberry_pinMode(JOY_DATAOUT1, 1);
-
-        joystick->nbuttons = 8;
-        joystick->naxes = 0;
-        joystick->nhats = 0;
-
-        old_nes_bits = 0xFF;
-
-        return 0;
-    }
-    num++;
-#endif // HAVE_NES
-
-    return SDL_SetError("Logic error: No joysticks available");
-}
-
-/* Function to determine is this joystick is attached to the system right now */
-SDL_bool SDL_SYS_JoystickAttached(SDL_Joystick *joystick)
-{
-    return SDL_TRUE;
-}
-
-/* Function to update the state of a joystick - called as a device poll.
- * This function shouldn't update the joystick structure directly,
- * but instead should call SDL_PrivateJoystick*() to deliver events
- * and update joystick device state.
- */
-void
-SDL_SYS_JoystickUpdate(SDL_Joystick * joystick)
-{
-#ifdef HAVE_NES
     uint32_t nes_bits;
 
 #ifdef HAVE_NES_SN74165 /* Experimental controller with SN74165 shift register */
@@ -211,50 +161,351 @@ SDL_SYS_JoystickUpdate(SDL_Joystick * joystick)
 
     uint32_t mask = 1;
     for (int i = 0; i < 8; i++, mask <<= 1) {
-        if ((nes_bits & mask) != (old_nes_bits & mask)) {
+        if ((nes_bits & mask) != (joystick->hwdata->buttons & mask)) {
             SDL_PrivateJoystickButton(joystick, i, !(nes_bits & mask) ? SDL_PRESSED : SDL_RELEASED);
         }
     }
 
-    old_nes_bits = nes_bits;
+    joystick->hwdata->buttons = nes_bits;
+}
 
 #endif // HAVE_NES
-    return;
+
+#ifdef HAVE_USPI
+#include <uspi.h>
+
+SDL_Joystick * uspi_joystick;
+
+static void
+USPiGamePadStatusHandler (const USPiGamePadState *pGamePadState)
+{
+    int center = (pGamePadState->maximum - pGamePadState->minimum + 1) / 2 + pGamePadState->minimum;
+    int steps1 = 32767000 / (center - pGamePadState->minimum);
+    int steps2 = 32767000 / (pGamePadState->maximum - center);
+    struct joystick_hwdata *hwdata = uspi_joystick->hwdata;
+
+    Uint8 axis = 0;
+    if ((pGamePadState->flags & FLAG_X) != 0) {
+        if (hwdata->x != pGamePadState->x) {
+            if (pGamePadState->x < center)
+                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->x - center) * steps1 - 500) / 1000);
+            else
+                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->x - center) * steps2 + 500) / 1000);
+            hwdata->x = pGamePadState->x;
+        }
+        axis++;
+    }
+    if ((pGamePadState->flags & FLAG_Y) != 0) {
+        if (hwdata->y != pGamePadState->y) {
+            if (pGamePadState->y < center)
+                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->y - center) * steps1 - 500) / 1000);
+            else
+                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->y - center) * steps2 + 500) / 1000);
+            hwdata->y = pGamePadState->y;
+        }
+        axis++;
+    }
+    if ((pGamePadState->flags & FLAG_Z) != 0) {
+        if (hwdata->z != pGamePadState->z) {
+            if (pGamePadState->z < center)
+                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->z - center) * steps1 - 500) / 1000);
+            else
+                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->z - center) * steps2 + 500) / 1000);
+            hwdata->z = pGamePadState->z;
+        }
+        axis++;
+    }
+    if ((pGamePadState->flags & FLAG_RX) != 0) {
+        if (hwdata->rx != pGamePadState->rx) {
+            if (pGamePadState->rx < center)
+                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->rx - center) * steps1 - 500) / 1000);
+            else
+                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->rx - center) * steps2 + 500) / 1000);
+            hwdata->rx = pGamePadState->rx;
+        }
+        axis++;
+    }
+    if ((pGamePadState->flags & FLAG_RY) != 0) {
+        if (hwdata->ry != pGamePadState->ry) {
+            if (pGamePadState->ry < center)
+                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->ry - center) * steps1 - 500) / 1000);
+            else
+                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->ry - center) * steps2 + 500) / 1000);
+            hwdata->ry = pGamePadState->ry;
+        }
+        axis++;
+    }
+    if ((pGamePadState->flags & FLAG_RZ) != 0) {
+        if (hwdata->rz != pGamePadState->rz) {
+            if (pGamePadState->rz < center)
+                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->rz - center) * steps1 - 500) / 1000);
+            else
+                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->rz - center) * steps2 + 500) / 1000);
+            hwdata->rz = pGamePadState->rz;
+        }
+        axis++;
+    }
+
+    if (pGamePadState->nbuttons > 0) {
+        for (int i = 0, bmMask = 1; i < pGamePadState->nbuttons; i++, bmMask <<= 1) {
+            if ((pGamePadState->buttons & bmMask) != (hwdata->buttons & bmMask)) {
+                SDL_PrivateJoystickButton(uspi_joystick, i, (pGamePadState->buttons & bmMask) ? SDL_PRESSED : SDL_RELEASED);
+            }
+        }
+    }
+    hwdata->buttons = pGamePadState->buttons;
+}
+
+static void
+USPi_JoystickOpen(SDL_Joystick * joystick, int device_index)
+{
+    const USPiGamePadState *pGamePadState = USPiGamePadGetStatus();
+    int i, bmMask;
+
+    joystick->naxes = 0;
+    for (i = 0, bmMask = FLAG_X; i < 6; i++, bmMask <<= 1) {
+        if ((pGamePadState->flags & bmMask) != 0)
+            joystick->naxes++;
+    }
+
+    joystick->nbuttons = pGamePadState->nbuttons;
+    joystick->hwdata->buttons = pGamePadState->buttons;
+
+    joystick->nhats = 0;
+
+    uspi_joystick = joystick;
+    USPiGamePadRegisterStatusHandler(USPiGamePadStatusHandler);
+}
+
+static void
+USPi_JoystickClose(SDL_Joystick * joystick)
+{
+    USPiGamePadRegisterStatusHandler(NULL);
+    uspi_joystick = NULL;
+}
+
+#endif // HAVE_USPI
+
+/* Function to scan the system for joysticks.
+ * It should return 0, or -1 on an unrecoverable fatal error.
+ */
+int
+SDL_SYS_JoystickInit(void)
+{
+    SDL_JoystickGUID guid;
+    SDL_joylist_item *item;
+
+#ifdef HAVE_NES
+
+    item = (SDL_joylist_item *) SDL_malloc(sizeof (SDL_joylist_item));
+    if (item == NULL) {
+        return -1;
+    }
+
+    SDL_zerop(item);
+
+    item->name = SDL_strdup("NES Gamepad");
+    SDL_memcpy( &item->guid.data, item->name, SDL_min( sizeof(guid), SDL_strlen( item->name ) ) );
+
+    item->open = NES_JoystickOpen;
+    item->update = NES_JoystickUpdate;
+
+    item->device_instance = instance_counter++;
+    if (SDL_joylist_tail == NULL) {
+        SDL_joylist = SDL_joylist_tail = item;
+    } else {
+        SDL_joylist_tail->next = item;
+        SDL_joylist_tail = item;
+    }
+
+    ++numjoysticks;
+
+#endif // HAVE_NES
+
+#ifdef HAVE_USPI
+
+    item = (SDL_joylist_item *) SDL_malloc(sizeof (SDL_joylist_item));
+    if (item == NULL) {
+        return -1;
+    }
+
+    SDL_zerop(item);
+
+    item->name = SDL_strdup("USPi Gamepad");
+
+    const USPiGamePadState *pGamePadState = USPiGamePadGetStatus();
+    Uint16 *guid16 = (Uint16 *) ((char *) &item->guid.data);
+    *(guid16++) = SDL_SwapLE16(3);
+    *(guid16++) = 0;
+    *(guid16++) = SDL_SwapLE16(pGamePadState->idVendor);
+    *(guid16++) = 0;
+    *(guid16++) = SDL_SwapLE16(pGamePadState->idProduct);
+    *(guid16++) = 0;
+    *(guid16++) = SDL_SwapLE16(pGamePadState->idVersion);
+    *(guid16++) = 0;
+
+    item->open = USPi_JoystickOpen;
+    item->close = USPi_JoystickClose;
+
+    item->device_instance = instance_counter++;
+    if (SDL_joylist_tail == NULL) {
+        SDL_joylist = SDL_joylist_tail = item;
+    } else {
+        SDL_joylist_tail->next = item;
+        SDL_joylist_tail = item;
+    }
+
+    ++numjoysticks;
+
+#endif // HAVE_USPI
+
+    return 0;
+}
+
+int SDL_SYS_NumJoysticks()
+{
+    return numjoysticks;
+}
+
+void SDL_SYS_JoystickDetect()
+{
+
+}
+
+SDL_bool SDL_SYS_JoystickNeedsPolling()
+{
+#ifdef HAVE_NES
+    return SDL_TRUE;
+#else
+    return SDL_FALSE;
+#endif
+}
+
+static SDL_joylist_item *
+JoystickByDevIndex(int device_index)
+{
+    SDL_joylist_item *item = SDL_joylist;
+
+    if ((device_index < 0) || (device_index >= numjoysticks)) {
+        return NULL;
+    }
+
+    while (device_index > 0) {
+        SDL_assert(item != NULL);
+        device_index--;
+        item = item->next;
+    }
+
+    return item;
+}
+
+/* Function to get the device-dependent name of a joystick */
+const char *
+SDL_SYS_JoystickNameForDeviceIndex(int device_index)
+{
+    return JoystickByDevIndex(device_index)->name;
+}
+
+/* Function to perform the mapping from device index to the instance id for this index */
+SDL_JoystickID SDL_SYS_GetInstanceIdOfDeviceIndex(int device_index)
+{
+    return JoystickByDevIndex(device_index)->device_instance;
+}
+
+/* Function to open a joystick for use.
+   The joystick to open is specified by the index field of the joystick.
+   This should fill the nbuttons and naxes fields of the joystick structure.
+   It returns 0, or -1 if there is an error.
+ */
+int
+SDL_SYS_JoystickOpen(SDL_Joystick * joystick, int device_index)
+{
+    SDL_joylist_item *item = JoystickByDevIndex(device_index);
+
+    joystick->instance_id = item->device_instance;
+    joystick->hwdata = (struct joystick_hwdata *)SDL_malloc(sizeof(*joystick->hwdata));
+    if (joystick->hwdata == NULL) {
+        return SDL_OutOfMemory();
+    }
+    SDL_memset(joystick->hwdata, 0, sizeof(*joystick->hwdata));
+    joystick->hwdata->item = item;
+    joystick->hwdata->guid = item->guid;
+
+    SDL_assert(item->hwdata == NULL);
+    item->hwdata = joystick->hwdata;
+
+    if (item->open != NULL) {
+        (*item->open) (joystick, device_index);
+    }
+
+    return 0;
+}
+
+/* Function to determine is this joystick is attached to the system right now */
+SDL_bool SDL_SYS_JoystickAttached(SDL_Joystick *joystick)
+{
+    return !joystick->closed;
+}
+
+/* Function to update the state of a joystick - called as a device poll.
+ * This function shouldn't update the joystick structure directly,
+ * but instead should call SDL_PrivateJoystick*() to deliver events
+ * and update joystick device state.
+ */
+void
+SDL_SYS_JoystickUpdate(SDL_Joystick * joystick)
+{
+    SDL_joylist_item *item = joystick->hwdata->item;
+    if (item->update != NULL) {
+        (*item->update) (joystick);
+    }
 }
 
 /* Function to close a joystick after use */
 void
 SDL_SYS_JoystickClose(SDL_Joystick * joystick)
 {
-    return;
+    if (joystick->hwdata) {
+        if (joystick->hwdata->item) {
+            if (joystick->hwdata->item->close != NULL)
+                (*joystick->hwdata->item->close) (joystick);
+            joystick->hwdata->item->hwdata = NULL;
+        }
+        SDL_free(joystick->hwdata);
+        joystick->hwdata = NULL;
+    }
+
+    joystick->closed = 1;
 }
 
 /* Function to perform any system-specific joystick related cleanup */
 void
 SDL_SYS_JoystickQuit(void)
 {
-    return;
+    SDL_joylist_item *item = NULL;
+    SDL_joylist_item *next = NULL;
+
+    for (item = SDL_joylist; item; item = next) {
+        next = item->next;
+        SDL_free(item->name);
+        SDL_free(item);
+    }
+
+    SDL_joylist = SDL_joylist_tail = NULL;
+
+    numjoysticks = 0;
+    instance_counter = 0;
 }
 
 SDL_JoystickGUID SDL_SYS_JoystickGetDeviceGUID( int device_index )
 {
-    SDL_JoystickGUID guid;
-    /* the GUID is just the first 16 chars of the name for now */
-    const char *name = SDL_SYS_JoystickNameForDeviceIndex( device_index );
-    SDL_zero( guid );
-    SDL_memcpy( &guid, name, SDL_min( sizeof(guid), SDL_strlen( name ) ) );
-    return guid;
+    return JoystickByDevIndex(device_index)->guid;
 }
 
 
 SDL_JoystickGUID SDL_SYS_JoystickGetGUID(SDL_Joystick * joystick)
 {
-    SDL_JoystickGUID guid;
-    /* the GUID is just the first 16 chars of the name for now */
-    const char *name = joystick->name;
-    SDL_zero( guid );
-    SDL_memcpy( &guid, name, SDL_min( sizeof(guid), SDL_strlen( name ) ) );
-    return guid;
+    return joystick->hwdata->guid;
 }
 
 #endif /* SDL_JOYSTICK_RASPBERRY */

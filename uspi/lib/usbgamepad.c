@@ -490,54 +490,10 @@ void USBGamePadDeviceCompletionRoutine (TUSBRequest *pURB, void *pParam, void *p
 
 void USBGamePadDeviceGetReport (TUSBGamePadDevice *pThis)
 {
-    s32 item, arg;
-    s8 *pHIDReportDescriptor = (s8 *)pThis->m_pHIDReportDescriptor;
-    u16 wReportDescriptorLength = pThis->m_usReportDescriptorLength;
-
-    while (wReportDescriptorLength > 0) {
-        item = *pHIDReportDescriptor++;
-        wReportDescriptorLength--;
-
-        switch(item & 0x03) {
-            case 0:
-                arg = 0;
-                break;
-            case 1:
-                arg = *pHIDReportDescriptor++;
-                wReportDescriptorLength--;
-                break;
-            case 2:
-                arg = *pHIDReportDescriptor++ & 0xFF;
-                arg = arg | (*pHIDReportDescriptor++ << 8);
-                wReportDescriptorLength -= 2;
-                break;
-            default:
-                arg = *pHIDReportDescriptor++;
-                arg = arg | (*pHIDReportDescriptor++ << 8);
-                arg = arg | (*pHIDReportDescriptor++ << 16);
-                arg = arg | (*pHIDReportDescriptor++ << 24);
-                wReportDescriptorLength -= 4;
-                break;
-        }
-
-        if ((item & 0xFC) == HID_REPORT_ID) {
-            if (DWHCIDeviceControlMessage (USBDeviceGetHost (&pThis->m_USBDevice),
-                               USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
-                               REQUEST_IN | REQUEST_CLASS | REQUEST_TO_INTERFACE,
-                               GET_REPORT, arg << 8,
-                               pThis->m_ucInterfaceNumber,
-                               pThis->m_pReportBuffer, 8) > 0)
-            {
-                USBGamePadDeviceDecodeReport (pThis);
-                return;
-            }
-        }
-    }
-
     if (DWHCIDeviceControlMessage (USBDeviceGetHost (&pThis->m_USBDevice),
                        USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
                        REQUEST_IN | REQUEST_CLASS | REQUEST_TO_INTERFACE,
-                       GET_REPORT, 0x0000,
+                       GET_REPORT, (REPORT_TYPE_INPUT << 8) | 0x00,
                        pThis->m_ucInterfaceNumber,
                        pThis->m_pReportBuffer, 8) > 0)
     {

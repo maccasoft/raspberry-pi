@@ -39,6 +39,7 @@ OBJS = \
 	lib/devicenameservice.o \
 	lib/dwhcidevice.o \
 	lib/dwhciframeschednper.o \
+	lib/dwhciframeschednsplit.o \
 	lib/dwhciframeschedper.o \
 	lib/dwhciregister.o \
 	lib/dwhcirootport.o \

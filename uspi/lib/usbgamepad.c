@@ -442,7 +442,7 @@ boolean USBGamePadDeviceConfigure (TUSBDevice *pUSBDevice)
 void USBGamePadDeviceRegisterStatusHandler (TUSBGamePadDevice *pThis, TGamePadStatusHandler *pStatusHandler)
 {
     assert (pThis != 0);
-    assert (pPadStatusHandler != 0);
+    assert (pStatusHandler != 0);
     pThis->m_pStatusHandler = pStatusHandler;
 }
 

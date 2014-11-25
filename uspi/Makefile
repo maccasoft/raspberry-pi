@@ -60,6 +60,7 @@ OBJS = \
 	lib/usbstandardhub.o \
 	lib/uspilibrary.o \
 	lib/util.o \
+	lib/synchronize.o \
 	lib/uspios.o
 
 -include $(DEPDIR)/lib/*.Po

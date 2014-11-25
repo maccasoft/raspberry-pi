@@ -48,7 +48,6 @@
 #define MAIL_COUNT    0x7 // Mailbox Channel 7: Counter
 #define MAIL_TAGS     0x8 // Mailbox Channel 8: Tags (ARM to VC)
 
-#define TAG_GET_BOARD_REVISION  0x00010002 // Hardware: Get Board Revision (Response: Board Revision)
 #define TAG_SET_POWER_STATE     0x00028001 // Power: Set Power State (Response: Device ID, State)
 
 #define POWER_STATE_OFF     (0 << 0)
@@ -155,60 +154,6 @@ static unsigned int mbox_read(unsigned char channel) {
             return (data & 0xfffffff0);
         }
     }
-}
-
-void EnterCritical (void)
-{
-	u32 nFlags;
-	__asm volatile ("mrs %0, cpsr" : "=r" (nFlags));
-
-	__asm volatile ("cpsid i");
-
-	if (s_nCriticalLevel++ == 0)
-	{
-		s_bWereEnabled = nFlags & 0x80 ? FALSE : TRUE;
-	}
-
-	DataMemBarrier ();
-}
-
-void LeaveCritical (void)
-{
-	DataMemBarrier ();
-
-	assert (s_nCriticalLevel > 0);
-	if (--s_nCriticalLevel == 0)
-	{
-		if (s_bWereEnabled)
-		{
-		    __asm volatile ("cpsie i");
-		}
-	}
-}
-
-int GetBoardRevision (void)
-{
-    unsigned int mb_addr = 0x40007000;      // 0x7000 in L2 cache coherent mode
-    volatile unsigned int *mailbuffer = (unsigned int *) mb_addr;
-
-    /* Get the display size */
-    mailbuffer[0] = 7 * 4;             // size of this message
-    mailbuffer[1] = 0;                  // this is a request
-
-    mailbuffer[2] = TAG_GET_BOARD_REVISION;
-    mailbuffer[3] = 4;                  // value buffer size
-    mailbuffer[4] = 0;                  // request/response
-    mailbuffer[5] = 0;                  // space to return value
-
-    mailbuffer[6] = 0;
-    mbox_write(MAIL_TAGS, mb_addr);
-
-    mbox_read(MAIL_TAGS);
-    if (mailbuffer[1] == MAIL_FULL) {
-        return mailbuffer[5];
-    }
-
-    return -1;
 }
 
 int SetPowerStateOn (unsigned nDeviceId)
@@ -394,7 +339,7 @@ static void TimerInterruptHandler (void *pParam)
         m_nTime++;
     }
 
-    EnterCritical ();
+    uspi_EnterCritical ();
 
     for (unsigned hTimer = 0; hTimer < KERNEL_TIMERS; hTimer++)
     {
@@ -412,7 +357,7 @@ static void TimerInterruptHandler (void *pParam)
         }
     }
 
-    LeaveCritical ();
+    uspi_LeaveCritical ();
 }
 
 unsigned TimerInitialize (void)
@@ -435,7 +380,7 @@ unsigned StartKernelTimer (unsigned nDelay,
                    void *pParam,
                    void *pContext)
 {
-    EnterCritical ();
+    uspi_EnterCritical ();
 
     unsigned hTimer;
     for (hTimer = 0; hTimer < KERNEL_TIMERS; hTimer++)
@@ -448,7 +393,7 @@ unsigned StartKernelTimer (unsigned nDelay,
 
     if (hTimer >= KERNEL_TIMERS)
     {
-        LeaveCritical ();
+        uspi_LeaveCritical ();
 
         return 0;
     }
@@ -459,7 +404,7 @@ unsigned StartKernelTimer (unsigned nDelay,
     m_KernelTimer[hTimer].m_pParam      = pParam;
     m_KernelTimer[hTimer].m_pContext    = pContext;
 
-    LeaveCritical ();
+    uspi_LeaveCritical ();
 
     return hTimer+1;
 }

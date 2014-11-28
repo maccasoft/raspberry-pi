@@ -2,10 +2,11 @@
 all: libkernel.a
 
 OBJS = \
-	platform.o \
-	fb.o \
-	console.o \
 	audio.o \
+	console.o \
+	emmc.o \
+	fb.o \
+	platform.o \
 	wiring.o
 
 -include common.mk

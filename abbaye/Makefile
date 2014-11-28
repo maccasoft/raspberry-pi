@@ -11,9 +11,11 @@ include ../uspi/pkgconfig.mk
 include ../libvorbis/pkgconfig.mk
 include ../libpng/pkgconfig.mk
 
-OBJS = \
+KOBJS = \
 	../kernel/start.o \
-	../kernel/syscalls.o \
+	../kernel/syscalls.o
+
+OBJS = \
 	data/enemies.o data/map.o \
 	graphics/blueparch.o graphics/fonts.o graphics/history.o graphics/intro.o graphics/parchment2.o \
 	graphics/parchment4.o graphics/parchment6.o graphics/redparch.o graphics/ending.o graphics/gameover.o \
@@ -29,8 +31,8 @@ CFLAGS += -finline-functions -funswitch-loops -fpredictive-commoning -fgcse-afte
 
 -include $(DEPDIR)/*.Po
 
-kernel.img: $(OBJS) Makefile ../kernel/raspberry.ld $(LIBS_DEP)
-	$(CXX) $(LDFLAGS) $(OBJS) $(LIBS)
+kernel.img: $(KOBJS) $(OBJS) Makefile ../kernel/raspberry.ld $(LIBS_DEP)
+	$(CXX) $(LDFLAGS) $(KOBJS) $(OBJS) $(LIBS)
 	$(OBJCOPY) kernel.elf -O binary kernel.img
 	rm kernel.elf
 
@@ -44,5 +46,5 @@ kernel.img: $(OBJS) Makefile ../kernel/raspberry.ld $(LIBS_DEP)
 	$(LD) -r -b binary -o $@ $<
 
 clean:
-	rm -f src/*.o kernel.elf kernel.img kernel.map
+	rm -f $(OBJS) kernel.elf kernel.img kernel.map
 	rm -rf $(DEPDIR)

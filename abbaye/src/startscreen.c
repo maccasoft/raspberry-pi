@@ -88,13 +88,13 @@ void startscreen(SDL_Window *screen,uint *state,uint *grapset,uint *fullscreen) 
 				}
 			}
             if (keyp.type == SDL_CONTROLLERBUTTONDOWN) { /* Game controller button pressed */
-                if (keyp.cbutton.button == SDL_CONTROLLER_BUTTON_GUIDE) { /* Change graphic set */
+                if (keyp.cbutton.button == SDL_CONTROLLER_BUTTON_BACK) { /* Change graphic set */
                     if (*grapset == 0)
                         *grapset = 1;
                     else
                         *grapset = 0;
                 }
-                if (keyp.cbutton.button == SDL_CONTROLLER_BUTTON_B) { /* Show instructions */
+                if (keyp.cbutton.button == SDL_CONTROLLER_BUTTON_A || keyp.cbutton.button == SDL_CONTROLLER_BUTTON_B) { /* Show instructions */
                     if (srcintro.y == 0)
                         srcintro.y = 192;
                     else {
@@ -103,7 +103,7 @@ void startscreen(SDL_Window *screen,uint *state,uint *grapset,uint *fullscreen) 
                     }
                 }
                 if (keyp.cbutton.button == SDL_CONTROLLER_BUTTON_START) { /* Start game */
-                    *state = 2;
+                    *state = 1;
                     exit = 1;
                 }
             }

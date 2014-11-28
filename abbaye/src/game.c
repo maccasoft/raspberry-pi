@@ -411,11 +411,11 @@ void control (struct hero *jean,uint *keyp) {
         }
 
         if (event.type == SDL_CONTROLLERBUTTONDOWN) {
-            if (event.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_UP) {
+            if (event.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_UP || event.cbutton.button == SDL_CONTROLLER_BUTTON_A) {
                 if ((jean->push[0] == 0) && (jean->jump == 0) && (jean->ducking == 0))
                     jean->jump = 1;
             }
-            if (event.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_DOWN) {
+            if (event.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_DOWN || event.cbutton.button == SDL_CONTROLLER_BUTTON_B) {
                 if ((jean->push[1] == 0) && (jean->jump == 0)) {
                     jean->push[1] = 1;
                     jean->ducking = 1;
@@ -433,16 +433,16 @@ void control (struct hero *jean,uint *keyp) {
                     jean->push[2] = 0;
                 }
             }
-            if (event.cbutton.button == SDL_CONTROLLER_BUTTON_GUIDE)
+            if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK)
                 *keyp = 9;
             if (event.cbutton.button == SDL_CONTROLLER_BUTTON_START)
                 *keyp = 10;
         }
 
         if (event.type == SDL_CONTROLLERBUTTONUP) {
-            if (event.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_UP)
+            if (event.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_UP || event.cbutton.button == SDL_CONTROLLER_BUTTON_A)
                 jean->push[0] = 0;
-            if (event.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_DOWN) {
+            if (event.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_DOWN || event.cbutton.button == SDL_CONTROLLER_BUTTON_B) {
                 jean->push[1] = 0;
                 jean->ducking = 0;
             }

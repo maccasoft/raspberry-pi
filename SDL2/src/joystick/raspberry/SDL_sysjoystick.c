@@ -324,38 +324,40 @@ SDL_SYS_JoystickInit(void)
 
 #ifdef HAVE_USPI
 
-    item = (SDL_joylist_item *) SDL_malloc(sizeof (SDL_joylist_item));
-    if (item == NULL) {
-        return -1;
+    if (USPiGamePadAvailable()) {
+        item = (SDL_joylist_item *) SDL_malloc(sizeof (SDL_joylist_item));
+        if (item == NULL) {
+            return -1;
+        }
+
+        SDL_zerop(item);
+
+        item->name = SDL_strdup("USPi Gamepad");
+
+        const USPiGamePadState *pGamePadState = USPiGamePadGetStatus();
+        Uint16 *guid16 = (Uint16 *) ((char *) &item->guid.data);
+        *(guid16++) = SDL_SwapLE16(3);
+        *(guid16++) = 0;
+        *(guid16++) = SDL_SwapLE16(pGamePadState->idVendor);
+        *(guid16++) = 0;
+        *(guid16++) = SDL_SwapLE16(pGamePadState->idProduct);
+        *(guid16++) = 0;
+        *(guid16++) = SDL_SwapLE16(pGamePadState->idVersion);
+        *(guid16++) = 0;
+
+        item->open = USPi_JoystickOpen;
+        item->close = USPi_JoystickClose;
+
+        item->device_instance = instance_counter++;
+        if (SDL_joylist_tail == NULL) {
+            SDL_joylist = SDL_joylist_tail = item;
+        } else {
+            SDL_joylist_tail->next = item;
+            SDL_joylist_tail = item;
+        }
+
+        ++numjoysticks;
     }
-
-    SDL_zerop(item);
-
-    item->name = SDL_strdup("USPi Gamepad");
-
-    const USPiGamePadState *pGamePadState = USPiGamePadGetStatus();
-    Uint16 *guid16 = (Uint16 *) ((char *) &item->guid.data);
-    *(guid16++) = SDL_SwapLE16(3);
-    *(guid16++) = 0;
-    *(guid16++) = SDL_SwapLE16(pGamePadState->idVendor);
-    *(guid16++) = 0;
-    *(guid16++) = SDL_SwapLE16(pGamePadState->idProduct);
-    *(guid16++) = 0;
-    *(guid16++) = SDL_SwapLE16(pGamePadState->idVersion);
-    *(guid16++) = 0;
-
-    item->open = USPi_JoystickOpen;
-    item->close = USPi_JoystickClose;
-
-    item->device_instance = instance_counter++;
-    if (SDL_joylist_tail == NULL) {
-        SDL_joylist = SDL_joylist_tail = item;
-    } else {
-        SDL_joylist_tail->next = item;
-        SDL_joylist_tail = item;
-    }
-
-    ++numjoysticks;
 
 #endif // HAVE_USPI
 

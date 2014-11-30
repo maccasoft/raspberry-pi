@@ -3,6 +3,8 @@
 	<name>SDL2_image</name>
 	<comment></comment>
 	<projects>
+		<project>libpng</project>
+		<project>SDL2</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

@@ -74,7 +74,7 @@ uint32_t mbox_read(uint8_t channel) {
 
 #define TIMER_CLO       0x20003004
 
-void usleep(int usec) {
+int usleep(useconds_t usec) {
     unsigned int cur_timer = mmio_read(TIMER_CLO);
     unsigned int trigger_value = cur_timer + usec;
     unsigned int rollover;
@@ -95,6 +95,8 @@ void usleep(int usec) {
             break;
         }
     }
+
+    return 0;
 }
 
 void register_timer(struct timer_wait * tw, unsigned int usec) {

@@ -47,10 +47,39 @@ struct block_device
     struct fs *fs;
 };
 
-int sd_card_init(struct block_device **dev);
+struct sd_scr;
 
-size_t sd_get_block_size();
-size_t sd_get_num_blocks();
+struct emmc_block_dev
+{
+    struct block_device bd;
+    uint32_t card_supports_sdhc;
+    uint32_t card_supports_18v;
+    uint32_t card_ocr;
+    uint32_t card_rca;
+    uint32_t last_interrupt;
+    uint32_t last_error;
+
+    struct sd_scr *scr;
+
+    int failed_voltage_switch;
+
+    uint32_t last_cmd_reg;
+    uint32_t last_cmd;
+    uint32_t last_cmd_success;
+    uint32_t last_r0;
+    uint32_t last_r1;
+    uint32_t last_r2;
+    uint32_t last_r3;
+
+    void *buf;
+    int blocks_to_transfer;
+    size_t block_size;
+    int use_sdma;
+    int card_removal;
+    uint32_t base_clock;
+};
+
+int sd_card_init(struct block_device **dev);
 
 size_t sd_read(uint8_t *buf, size_t buf_size, uint32_t block_no);
 size_t sd_write(uint8_t *buf, size_t buf_size, uint32_t block_no);

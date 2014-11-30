@@ -206,3 +206,8 @@ void SDL_Interrupt_Handler() {
         USPiInterruptHandler ();
 #endif
 }
+
+void log_printf (const char *ptr, ...)
+{
+    // Do nothing
+}

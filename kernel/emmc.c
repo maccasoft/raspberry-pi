@@ -97,37 +97,7 @@ struct sd_scr
     int         sd_version;
 };
 
-struct emmc_block_dev
-{
-	struct block_device bd;
-	uint32_t card_supports_sdhc;
-	uint32_t card_supports_18v;
-	uint32_t card_ocr;
-	uint32_t card_rca;
-	uint32_t last_interrupt;
-	uint32_t last_error;
-
-	struct sd_scr *scr;
-
-	int failed_voltage_switch;
-
-    uint32_t last_cmd_reg;
-    uint32_t last_cmd;
-	uint32_t last_cmd_success;
-	uint32_t last_r0;
-	uint32_t last_r1;
-	uint32_t last_r2;
-	uint32_t last_r3;
-
-	void *buf;
-	int blocks_to_transfer;
-	size_t block_size;
-	int use_sdma;
-	int card_removal;
-	uint32_t base_clock;
-};
-
-static struct emmc_block_dev emmc_dev;
+struct emmc_block_dev emmc_dev;
 
 #define EMMC_BASE		0x20300000
 #define	EMMC_ARG2		0

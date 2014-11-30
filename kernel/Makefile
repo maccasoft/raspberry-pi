@@ -6,6 +6,7 @@ OBJS = \
 	console.o \
 	emmc.o \
 	fb.o \
+	ff.o \
 	platform.o \
 	wiring.o
 

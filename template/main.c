@@ -31,6 +31,8 @@
 #include "platform.h"
 #include "wiring.h"
 #include "console.h"
+#include "emmc.h"
+#include "ff.h"
 
 #if BYTES_PER_PIXEL == 2
 
@@ -43,6 +45,9 @@
 #define BACKGROUND_COLOR    RGB(98, 0, 32)
 
 #endif
+
+FATFS FatFs;
+FATFS USPiFatFs;
 
 #if defined(__cplusplus)
 extern "C" {
@@ -288,8 +293,14 @@ static void USPiKeyStatusHandlerRaw (unsigned char ucModifiers, const unsigned c
 
 #endif // HAVE_USPI
 
+void log_printf (const char *ptr, ...)
+{
+    // Do nothing
+}
+
 void main() {
-    int x, y;
+    int rc, x, y;
+    char temp[64];
     struct timer_wait tw;
     int led_status = LOW;
 
@@ -309,6 +320,15 @@ void main() {
     mvaddstr(1, 9, "**** RASPBERRY-PI ****");
     mvaddstr(3, 7, "BARE-METAL SYSTEM TEMPLATE\r\n");
 
+    if (sd_card_init(NULL) == 0) {
+        if ((rc = f_mount(&FatFs, "0:", 1)) != FR_OK) {
+            sprintf(temp, "\r\nSD CARD NOT MOUNTED (%d)\r\n", rc);
+            addstr(temp);
+        }
+    }
+    else
+        addstr("\r\nSD CARD ERROR\r\n");
+
 #ifdef HAVE_CSUD
     UsbInitialise();
     if (KeyboardCount() == 0)
@@ -317,6 +337,14 @@ void main() {
 
 #ifdef HAVE_USPI
     USPiInitialize ();
+
+    if (USPiMassStorageDeviceAvailable()) {
+        if ((rc = f_mount(&USPiFatFs, "1:", 1)) != FR_OK) {
+            sprintf(temp, "\r\nUSB DRIVE NOT MOUNTED (%d)\r\n", rc);
+            addstr(temp);
+        }
+    }
+
     if (USPiKeyboardAvailable()) {
         USPiKeyboardRegisterKeyStatusHandlerRaw (USPiKeyStatusHandlerRaw);
     }

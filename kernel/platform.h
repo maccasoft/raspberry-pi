@@ -18,6 +18,7 @@
 #ifndef PLATFORM_H_
 #define PLATFORM_H_
 
+#include <unistd.h>
 #include <stdint.h>
 
 #define PERIPHERAL_BASE                 0x20000000 // Peripheral Base Address
@@ -1170,7 +1171,7 @@ uint32_t mmio_read(uint32_t reg);
 void     mbox_write(uint8_t channel, uint32_t data);
 uint32_t mbox_read(uint8_t channel);
 
-void     usleep(int usec);
+int      usleep(useconds_t usec);
 
 void register_timer(struct timer_wait * tw, unsigned int usec);
 int compare_timer(struct timer_wait * tw);

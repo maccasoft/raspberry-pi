@@ -58,6 +58,7 @@ OBJS = \
 	lib/usbmouse.o \
 	lib/usbrequest.o \
 	lib/usbstandardhub.o \
+	lib/usbstring.o \
 	lib/uspilibrary.o \
 	lib/util.o \
 	lib/synchronize.o \

@@ -306,7 +306,7 @@ DSTATUS disk_status (
         case MMC :
             return 0;
 
-        case USB :
+        default :
             if (!USPiMassStorageDeviceAvailable())
             {
                 return STA_NOINIT;
@@ -328,14 +328,9 @@ DSTATUS disk_initialize (
 {
     switch (pdrv) {
         case MMC :
-            /*if (sd_get_num_blocks() == 0 || sd_get_block_size() == 0)
-            {
-                if (sd_card_init() != 0)
-                    return STA_NOINIT;
-            }*/
             return 0;
 
-        case USB :
+        default :
             if (!USPiMassStorageDeviceAvailable())
             {
                 return STA_NOINIT;
@@ -370,15 +365,15 @@ DRESULT disk_read (
             return RES_OK;
         }
 
-        case USB :
+        default :
         {
             if (!USPiMassStorageDeviceAvailable())
             {
                 return RES_PARERR;
             }
 
-            unsigned buf_size = count * 512;
-            if (USPiMassStorageDeviceRead(sector * 512, buff, buf_size) < buf_size)
+            unsigned buf_size = count * USPI_BLOCK_SIZE;
+            if (USPiMassStorageDeviceRead(sector * USPI_BLOCK_SIZE, buff, buf_size, pdrv - USB) < buf_size)
             {
                 return RES_ERROR;
             }
@@ -415,15 +410,15 @@ DRESULT disk_write (
             return RES_OK;
         }
 
-        case USB :
+        default :
         {
             if (!USPiMassStorageDeviceAvailable())
             {
                 return RES_PARERR;
             }
 
-            unsigned buf_size = count * 512;
-            if (USPiMassStorageDeviceWrite(sector * 512, buff, buf_size) < buf_size)
+            unsigned buf_size = count * USPI_BLOCK_SIZE;
+            if (USPiMassStorageDeviceWrite(sector * USPI_BLOCK_SIZE, buff, buf_size, pdrv - USB) < buf_size)
             {
                 return RES_ERROR;
             }
@@ -469,7 +464,7 @@ DRESULT disk_ioctl (
             }
             return RES_PARERR;
 
-        case USB :
+        default :
             if (!USPiMassStorageDeviceAvailable())
             {
                 return RES_PARERR;
@@ -485,12 +480,12 @@ DRESULT disk_ioctl (
             }
             if (cmd == GET_SECTOR_SIZE)
             {
-                *(DWORD *)buff = 512;
+                *(DWORD *)buff = USPI_BLOCK_SIZE;
                 return RES_OK;
             }
             if (cmd == GET_BLOCK_SIZE)
             {
-                *(DWORD *)buff = 512;
+                *(DWORD *)buff = USPI_BLOCK_SIZE;
                 return RES_OK;
             }
             return RES_PARERR;

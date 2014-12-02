@@ -30,17 +30,16 @@
 #include "SDL_endian.h"
 #include "SDL_assert.h"
 
+#define MAX_AXES    6
+#define MAX_HATS    6
+
 /* The private structure used to keep track of a joystick */
 struct joystick_hwdata
 {
     struct SDL_joylist_item *item;
     SDL_JoystickGUID guid;
-    int x;
-    int y;
-    int z;
-    int rx;
-    int ry;
-    int rz;
+    int axes[MAX_AXES];
+    int hats[MAX_HATS];
     unsigned int buttons;
 };
 
@@ -179,75 +178,33 @@ SDL_Joystick * uspi_joystick;
 static void
 USPiGamePadStatusHandler (const USPiGamePadState *pGamePadState)
 {
-    int center = (pGamePadState->maximum - pGamePadState->minimum + 1) / 2 + pGamePadState->minimum;
-    int steps1 = 32767000 / (center - pGamePadState->minimum);
-    int steps2 = 32767000 / (pGamePadState->maximum - center);
+    int i, value, bmMask, center, steps1, steps2;
     struct joystick_hwdata *hwdata = uspi_joystick->hwdata;
 
-    Uint8 axis = 0;
-    if ((pGamePadState->flags & FLAG_X) != 0) {
-        if (hwdata->x != pGamePadState->x) {
-            if (pGamePadState->x < center)
-                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->x - center) * steps1 - 500) / 1000);
+    for (i = 0; i < pGamePadState->naxes; i++) {
+        value = pGamePadState->axes[i].value;
+        if (hwdata->axes[i] != value) {
+            center = (pGamePadState->axes[i].maximum - pGamePadState->axes[i].minimum + 1) / 2 + pGamePadState->axes[i].minimum;
+            steps1 = 32767000 / (center - pGamePadState->axes[i].minimum);
+            steps2 = 32767000 / (pGamePadState->axes[i].maximum - center);
+            if (value < center)
+                SDL_PrivateJoystickAxis(uspi_joystick, i, ((value - center) * steps1 - 500) / 1000);
             else
-                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->x - center) * steps2 + 500) / 1000);
-            hwdata->x = pGamePadState->x;
+                SDL_PrivateJoystickAxis(uspi_joystick, i, ((value - center) * steps2 + 500) / 1000);
+            hwdata->axes[i] = value;
         }
-        axis++;
     }
-    if ((pGamePadState->flags & FLAG_Y) != 0) {
-        if (hwdata->y != pGamePadState->y) {
-            if (pGamePadState->y < center)
-                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->y - center) * steps1 - 500) / 1000);
-            else
-                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->y - center) * steps2 + 500) / 1000);
-            hwdata->y = pGamePadState->y;
+
+    for (i = 0; i < pGamePadState->nhats; i++) {
+        value = pGamePadState->hats[i];
+        if (hwdata->hats[i] != value) {
+            SDL_PrivateJoystickHat(uspi_joystick, i, value);
+            hwdata->hats[i] = value;
         }
-        axis++;
-    }
-    if ((pGamePadState->flags & FLAG_Z) != 0) {
-        if (hwdata->z != pGamePadState->z) {
-            if (pGamePadState->z < center)
-                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->z - center) * steps1 - 500) / 1000);
-            else
-                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->z - center) * steps2 + 500) / 1000);
-            hwdata->z = pGamePadState->z;
-        }
-        axis++;
-    }
-    if ((pGamePadState->flags & FLAG_RX) != 0) {
-        if (hwdata->rx != pGamePadState->rx) {
-            if (pGamePadState->rx < center)
-                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->rx - center) * steps1 - 500) / 1000);
-            else
-                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->rx - center) * steps2 + 500) / 1000);
-            hwdata->rx = pGamePadState->rx;
-        }
-        axis++;
-    }
-    if ((pGamePadState->flags & FLAG_RY) != 0) {
-        if (hwdata->ry != pGamePadState->ry) {
-            if (pGamePadState->ry < center)
-                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->ry - center) * steps1 - 500) / 1000);
-            else
-                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->ry - center) * steps2 + 500) / 1000);
-            hwdata->ry = pGamePadState->ry;
-        }
-        axis++;
-    }
-    if ((pGamePadState->flags & FLAG_RZ) != 0) {
-        if (hwdata->rz != pGamePadState->rz) {
-            if (pGamePadState->rz < center)
-                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->rz - center) * steps1 - 500) / 1000);
-            else
-                SDL_PrivateJoystickAxis(uspi_joystick, axis, ((pGamePadState->rz - center) * steps2 + 500) / 1000);
-            hwdata->rz = pGamePadState->rz;
-        }
-        axis++;
     }
 
     if (pGamePadState->nbuttons > 0) {
-        for (int i = 0, bmMask = 1; i < pGamePadState->nbuttons; i++, bmMask <<= 1) {
+        for (i = 0, bmMask = 1 << (pGamePadState->nbuttons - 1); i < pGamePadState->nbuttons; i++, bmMask >>= 1) {
             if ((pGamePadState->buttons & bmMask) != (hwdata->buttons & bmMask)) {
                 SDL_PrivateJoystickButton(uspi_joystick, i, (pGamePadState->buttons & bmMask) ? SDL_PRESSED : SDL_RELEASED);
             }
@@ -259,17 +216,22 @@ USPiGamePadStatusHandler (const USPiGamePadState *pGamePadState)
 static void
 USPi_JoystickOpen(SDL_Joystick * joystick, int device_index)
 {
-    const USPiGamePadState *pGamePadState = USPiGamePadGetStatus();
-    int i, bmMask;
+    int i;
+    struct joystick_hwdata *hwdata = joystick->hwdata;
+    const USPiGamePadState *pGamePadState = USPiGamePadGetStatus(0);
 
-    joystick->naxes = 0;
-    for (i = 0, bmMask = FLAG_X; i < 6; i++, bmMask <<= 1) {
-        if ((pGamePadState->flags & bmMask) != 0)
-            joystick->naxes++;
+    joystick->naxes = pGamePadState->naxes;
+    for (i = 0; i < pGamePadState->naxes; i++) {
+        hwdata->axes[i] = pGamePadState->axes[i].value;
+    }
+
+    joystick->nhats = pGamePadState->nhats;
+    for (i = 0; i < pGamePadState->nhats; i++) {
+        hwdata->hats[i] = pGamePadState->hats[i];
     }
 
     joystick->nbuttons = pGamePadState->nbuttons;
-    joystick->hwdata->buttons = pGamePadState->buttons;
+    hwdata->buttons = pGamePadState->buttons;
 
     joystick->nhats = 0;
 
@@ -334,7 +296,7 @@ SDL_SYS_JoystickInit(void)
 
         item->name = SDL_strdup("USPi Gamepad");
 
-        const USPiGamePadState *pGamePadState = USPiGamePadGetStatus();
+        const USPiGamePadState *pGamePadState = USPiGamePadGetStatus(0);
         Uint16 *guid16 = (Uint16 *) ((char *) &item->guid.data);
         *(guid16++) = SDL_SwapLE16(3);
         *(guid16++) = 0;

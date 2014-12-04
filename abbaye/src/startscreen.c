@@ -64,9 +64,6 @@ void startscreen(SDL_Window *screen,uint *state,uint *grapset,uint *fullscreen) 
 
 		/* Check keyboard */
 		if ( SDL_PollEvent(&keyp) ) {
-            if (keyp.type == SDL_CONTROLLERDEVICEADDED) {
-                SDL_GameControllerOpen(keyp.cdevice.which);
-            }
 			if (keyp.type == SDL_KEYDOWN) { /* Key pressed */
 				if (keyp.key.keysym.sym == SDLK_c) { /* Change graphic set */
 					if (*grapset == 0)

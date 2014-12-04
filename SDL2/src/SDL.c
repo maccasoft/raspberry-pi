@@ -441,6 +441,8 @@ SDL_GetPlatform()
     return "iOS";
 #elif __PSP__
     return "PlayStation Portable";
+#elif defined(__RASPBERRY_PI__)
+    return "RaspberryPi";
 #else
     return "Unknown (see SDL_platform.h)";
 #endif

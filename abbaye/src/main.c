@@ -12,6 +12,11 @@
 #include "SDL_image.h"
 #include "SDL_mixer.h"
 
+#include "emmc.h"
+#include "ff.h"
+
+FATFS FatFs;
+
 extern void startscreen(SDL_Window *screen,uint *state,uint *grapset,uint *fullscreen);
 extern void history(SDL_Window *screen,uint *state,uint *grapset,uint *fullscreen);
 extern void game(SDL_Window *screen,uint *state,uint *grapset,uint *fullscreen);
@@ -36,6 +41,10 @@ void main () {
 	uint grapset = 1; /* 0-8bits, 1-16bits */
 	uint fullscreen = 0; /* 0-Windowed,1-Fullscreen */
 
+    if (sd_card_init(NULL) == 0) {
+        f_mount(&FatFs, "0:", 1);
+    }
+
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER);
 
 	/* Creating window */
@@ -44,6 +53,14 @@ void main () {
 	/* Init audio */
 	Mix_OpenAudio (22050,MIX_DEFAULT_FORMAT,2,4096);
 	Mix_AllocateChannels(5);
+
+	/* Init game controllers */
+    SDL_GameControllerAddMappingsFromFile("control.txt");
+    for (int i = 0; i < SDL_NumJoysticks(); i++) {
+        if (SDL_IsGameController(i)) {
+            SDL_GameControllerOpen(i);
+        }
+    }
 
 	while (1) {
 		switch (state) {

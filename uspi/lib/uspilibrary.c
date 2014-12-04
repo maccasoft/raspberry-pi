@@ -3,7 +3,7 @@
 //
 // USPi - An USB driver for Raspberry Pi written in C
 // Copyright (C) 2014  R. Stange <rsta2@o2online.de>
-// 
+//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -56,7 +56,7 @@ int USPiInitialize (void)
 	}
 
 	s_pLibrary->pUKBD1 = (TUSBKeyboardDevice *) DeviceNameServiceGetDevice (DeviceNameServiceGet (), "ukbd1", FALSE);
-	
+
 	s_pLibrary->pUMouse1 = (TUSBMouseDevice *) DeviceNameServiceGetDevice (DeviceNameServiceGet (), "umouse1", FALSE);
 
 	for (unsigned i = 0; i < MAX_DEVICES; i++)
@@ -155,7 +155,7 @@ int USPiMassStorageDeviceRead (unsigned long long ullOffset, void *pBuffer, unsi
 	{
 		return -1;
 	}
-	
+
 	if (USBBulkOnlyMassStorageDeviceSeek (s_pLibrary->pUMSD[nDeviceIndex], ullOffset) != ullOffset)
 	{
 		return -1;
@@ -232,15 +232,14 @@ void USPiGamePadRegisterStatusHandler (TGamePadStatusHandler *pStatusHandler)
 {
 	assert (s_pLibrary != 0);
 
-	for (unsigned i = 0; i < MAX_DEVICES; i++)
-	{
-		if (s_pLibrary->pUPAD[i] == 0)
-		{
-			break;
-		}
-
-		USBGamePadDeviceRegisterStatusHandler (s_pLibrary->pUPAD[i], pStatusHandler);
-	}
+    unsigned i;
+    for (i = 0; i < MAX_DEVICES; i++)
+    {
+        if (s_pLibrary->pUPAD[i] != 0)
+        {
+            USBGamePadDeviceRegisterStatusHandler (s_pLibrary->pUPAD[i], pStatusHandler);
+        }
+    }
 }
 
 const USPiGamePadState *USPiGamePadGetStatus (unsigned nDeviceIndex)
@@ -252,7 +251,7 @@ const USPiGamePadState *USPiGamePadGetStatus (unsigned nDeviceIndex)
 	{
 		return 0;
 	}
-	
+
 	USBGamePadDeviceGetReport (s_pLibrary->pUPAD[nDeviceIndex]);
 
 	return &s_pLibrary->pUPAD[nDeviceIndex]->m_State;

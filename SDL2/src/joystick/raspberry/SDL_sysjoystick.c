@@ -49,6 +49,7 @@ typedef struct SDL_joylist_item
     int device_instance;
     char *name;
     SDL_JoystickGUID guid;
+    unsigned int devnum;
     struct joystick_hwdata *hwdata;
     struct SDL_joylist_item *next;
 
@@ -173,13 +174,18 @@ NES_JoystickUpdate(SDL_Joystick * joystick)
 #ifdef HAVE_USPI
 #include <uspi.h>
 
-SDL_Joystick * uspi_joystick;
+SDL_Joystick * uspi_joystick[4];
 
 static void
-USPiGamePadStatusHandler (const USPiGamePadState *pGamePadState)
+USPiGamePadStatusHandler (unsigned nDeviceIndex, const USPiGamePadState *pGamePadState)
 {
     int i, value, bmMask, center, steps1, steps2;
-    struct joystick_hwdata *hwdata = uspi_joystick->hwdata;
+    SDL_Joystick *joystick = uspi_joystick[nDeviceIndex];
+
+    if (joystick == NULL)
+        return;
+
+    struct joystick_hwdata *hwdata = joystick->hwdata;
 
     for (i = 0; i < pGamePadState->naxes; i++) {
         value = pGamePadState->axes[i].value;
@@ -188,9 +194,9 @@ USPiGamePadStatusHandler (const USPiGamePadState *pGamePadState)
             steps1 = 32767000 / (center - pGamePadState->axes[i].minimum);
             steps2 = 32767000 / (pGamePadState->axes[i].maximum - center);
             if (value < center)
-                SDL_PrivateJoystickAxis(uspi_joystick, i, ((value - center) * steps1 - 500) / 1000);
+                SDL_PrivateJoystickAxis(joystick, i, ((value - center) * steps1 - 500) / 1000);
             else
-                SDL_PrivateJoystickAxis(uspi_joystick, i, ((value - center) * steps2 + 500) / 1000);
+                SDL_PrivateJoystickAxis(joystick, i, ((value - center) * steps2 + 500) / 1000);
             hwdata->axes[i] = value;
         }
     }
@@ -198,7 +204,7 @@ USPiGamePadStatusHandler (const USPiGamePadState *pGamePadState)
     for (i = 0; i < pGamePadState->nhats; i++) {
         value = pGamePadState->hats[i];
         if (hwdata->hats[i] != value) {
-            SDL_PrivateJoystickHat(uspi_joystick, i, value);
+            SDL_PrivateJoystickHat(joystick, i, value);
             hwdata->hats[i] = value;
         }
     }
@@ -206,7 +212,7 @@ USPiGamePadStatusHandler (const USPiGamePadState *pGamePadState)
     if (pGamePadState->nbuttons > 0) {
         for (i = 0, bmMask = 1 << (pGamePadState->nbuttons - 1); i < pGamePadState->nbuttons; i++, bmMask >>= 1) {
             if ((pGamePadState->buttons & bmMask) != (hwdata->buttons & bmMask)) {
-                SDL_PrivateJoystickButton(uspi_joystick, i, (pGamePadState->buttons & bmMask) ? SDL_PRESSED : SDL_RELEASED);
+                SDL_PrivateJoystickButton(joystick, i, (pGamePadState->buttons & bmMask) ? SDL_PRESSED : SDL_RELEASED);
             }
         }
     }
@@ -218,7 +224,7 @@ USPi_JoystickOpen(SDL_Joystick * joystick, int device_index)
 {
     int i;
     struct joystick_hwdata *hwdata = joystick->hwdata;
-    const USPiGamePadState *pGamePadState = USPiGamePadGetStatus(0);
+    const USPiGamePadState *pGamePadState = USPiGamePadGetStatus(hwdata->item->devnum);
 
     joystick->naxes = pGamePadState->naxes;
     for (i = 0; i < pGamePadState->naxes; i++) {
@@ -235,7 +241,7 @@ USPi_JoystickOpen(SDL_Joystick * joystick, int device_index)
 
     joystick->nhats = 0;
 
-    uspi_joystick = joystick;
+    uspi_joystick[hwdata->item->devnum] = joystick;
     USPiGamePadRegisterStatusHandler(USPiGamePadStatusHandler);
 }
 
@@ -243,7 +249,7 @@ static void
 USPi_JoystickClose(SDL_Joystick * joystick)
 {
     USPiGamePadRegisterStatusHandler(NULL);
-    uspi_joystick = NULL;
+    uspi_joystick[joystick->hwdata->item->devnum] = NULL;
 }
 
 #endif // HAVE_USPI
@@ -286,25 +292,27 @@ SDL_SYS_JoystickInit(void)
 
 #ifdef HAVE_USPI
 
-    if (USPiGamePadAvailable()) {
+    for (int deviceIndex = 0; deviceIndex < USPiGamePadAvailable(); deviceIndex++) {
         item = (SDL_joylist_item *) SDL_malloc(sizeof (SDL_joylist_item));
         if (item == NULL) {
             return -1;
         }
 
+        TUSPiDeviceInformation info;
+        USPiDeviceGetInformation (GAMEPAD_CLASS, deviceIndex, &info);
+
         SDL_zerop(item);
+        item->devnum = deviceIndex;
+        item->name = SDL_strdup(info.pProduct);
 
-        item->name = SDL_strdup("USPi Gamepad");
-
-        const USPiGamePadState *pGamePadState = USPiGamePadGetStatus(0);
         Uint16 *guid16 = (Uint16 *) ((char *) &item->guid.data);
         *(guid16++) = SDL_SwapLE16(3);
         *(guid16++) = 0;
-        *(guid16++) = SDL_SwapLE16(pGamePadState->idVendor);
+        *(guid16++) = SDL_SwapLE16(info.idVendor);
         *(guid16++) = 0;
-        *(guid16++) = SDL_SwapLE16(pGamePadState->idProduct);
+        *(guid16++) = SDL_SwapLE16(info.idProduct);
         *(guid16++) = 0;
-        *(guid16++) = SDL_SwapLE16(pGamePadState->idVersion);
+        *(guid16++) = SDL_SwapLE16(info.bcdDevice);
         *(guid16++) = 0;
 
         item->open = USPi_JoystickOpen;

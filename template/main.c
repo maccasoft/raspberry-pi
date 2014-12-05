@@ -19,11 +19,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef HAVE_CSUD
-#include <usbd/usbd.h>
-#include <device/hid/keyboard.h>
-#endif
-
 #ifdef HAVE_USPI
 #include <uspi.h>
 #endif
@@ -89,7 +84,7 @@ __attribute__ ((interrupt ("IRQ"))) void interrupt_irq() {
 #define KEY_DOWN    0x5100
 #define KEY_UP      0x5200
 
-#if defined(HAVE_CSUD) || defined(HAVE_USPI)
+#ifdef HAVE_USPI
 
 #define SWAP_BYTES(b)   (((b & 0xFF) << 8) | ((b & 0xFF00) >> 8))
 
@@ -113,82 +108,6 @@ static unsigned char keyShift_it[] = {
     '8', '9', '0', '.', '>', 0x0, 0x0, '='
 };
 
-#define MAX_KEYS        6
-
-#endif
-
-#ifdef HAVE_CSUD
-
-int kbd_getchar() {
-    static int keydown[MAX_KEYS] = { 0, 0, 0, 0, 0, 0 };
-
-    u32 kbdCount = KeyboardCount();
-    if (kbdCount == 0) {
-        for (int i = 0; i < MAX_KEYS; i++) {
-            keydown[i] = 0;
-        }
-        return -1;
-    }
-
-    u32 kbdAddress = KeyboardGetAddress(0);
-    if (kbdAddress == 0) {
-        for (int i = 0; i < MAX_KEYS; i++) {
-            keydown[i] = 0;
-        }
-        return -1;
-    }
-
-    struct KeyboardModifiers modifiers = KeyboardGetModifiers(kbdAddress);
-
-    u32 count = KeyboardGetKeyDownCount(kbdAddress);
-    for (int index = 0; index < count && index < MAX_KEYS; index++) {
-        u16 key = KeyboardGetKeyDown(kbdAddress, index);
-        for (int i = 0; i < MAX_KEYS; i++) {
-            if (key == keydown[i]) {
-                key = 0;
-                break;
-            }
-        }
-        if (key != 0) {
-            for (int i = 0; i < MAX_KEYS; i++) {
-                if (keydown[i] == 0) {
-                    keydown[i] = key;
-                    if (modifiers.LeftShift || modifiers.RightShift) {
-                        if (key >= sizeof(keyShift_it)) {
-                            return key;
-                        }
-                        return keyShift_it[key] != 0 ? keyShift_it[key] : SWAP_BYTES(key);
-                    }
-                    else {
-                        if (key >= sizeof(keyNormal_it)) {
-                            return key;
-                        }
-                        return keyNormal_it[key] != 0 ? keyNormal_it[key] : SWAP_BYTES(key);
-                    }
-                    return -1;
-                }
-            }
-        }
-    }
-
-    KeyboardPoll(kbdAddress);
-
-    for (int i = 0; i < MAX_KEYS; i++) {
-        u16 key = keydown[i];
-        if (key != 0) {
-            if (!KeyboadGetKeyIsDown(kbdAddress, key)) {
-                keydown[i] = 0;
-            }
-        }
-    }
-
-    return -1;
-}
-
-#endif // HAVE_CSUD
-
-#ifdef HAVE_USPI
-
 void LogWrite (const char *pSource, unsigned Severity, const char *pMessage, ...)
 {
     // Do nothing
@@ -209,6 +128,7 @@ void DebugHexdump (const void *pBuffer, unsigned nBufLen, const char *pSource /*
     // Do nothing
 }
 
+#define MAX_KEYS        6
 #define MAX_KEYBUFFER  16
 
 static int readIndex;
@@ -329,12 +249,6 @@ void main() {
     else
         addstr("\r\nSD CARD ERROR\r\n");
 
-#ifdef HAVE_CSUD
-    UsbInitialise();
-    if (KeyboardCount() == 0)
-        addstr("\r\nNO KEYBOARD DETECTED\r\n");
-#endif
-
 #ifdef HAVE_USPI
     USPiInitialize ();
 
@@ -350,7 +264,7 @@ void main() {
     }
     else
         addstr("\r\nNO KEYBOARD DETECTED\r\n");
-#endif
+#endif // HAVE_USPI
 
     pinMode(16, OUTPUT);
     register_timer(&tw, 250000);

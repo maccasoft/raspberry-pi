@@ -1,7 +1,6 @@
 
 all:
 	make -C kernel
-	make -C csud -k driver CONFIG=FINAL TYPE=STANDALONE TARGET=RPI GNU=arm-none-eabi-
 	make -C uspi
 	make -C zlib
 	make -C libpng
@@ -16,7 +15,6 @@ all:
 
 clean:
 	make -C kernel -k clean
-	make -C csud -k clean
 	make -C uspi -k clean
 	make -C zlib -k clean
 	make -C libpng -k clean

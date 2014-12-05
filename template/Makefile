@@ -2,7 +2,6 @@
 all: kernel.img
 
 include ../kernel/common.mk
-#include ../csud/pkgconfig.mk
 include ../uspi/pkgconfig.mk
 
 OBJS = \
@@ -10,7 +9,6 @@ OBJS = \
 	../kernel/syscalls.o \
 	main.o
 
-# CFLAGS += -DHAVE_CSUD
 CFLAGS += -DHAVE_USPI
 
 -include $(DEPDIR)/*.Po

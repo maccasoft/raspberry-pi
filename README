@@ -5,7 +5,6 @@ ports.
 
    kernel     - Core startup and kernel code
 
-   csud       - Chadder's Simple USB Driver
    uspi       - An USB driver for Raspberry Pi written in C
    libpng     - PNG image file format library
    libogg     - OGG file format library
@@ -44,8 +43,3 @@ INSTALL
 
    Firmware files can be downloaded from
    https://github.com/raspberrypi/firmware/tree/master/boot
-
-   Please note that the csud library has a bug that crashes the application
-   when used with firmware files release after october 2012. The code,
-   without csud support, was tested using firmware files dated july 5, 2013,
-   any later firmware may not work correctly.

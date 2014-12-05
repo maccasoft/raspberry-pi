@@ -39,11 +39,6 @@
 
 #include "../../core/raspberry/SDL_raspberry.h"
 
-#ifdef HAVE_CSUD
-#include "usbd/usbd.h"
-#include "device/hid/keyboard.h"
-#endif // HAVE_CSUD
-
 #ifdef HAVE_USPI
 #include "uspi.h"
 
@@ -204,10 +199,6 @@ RASPBERRY_CreateDevice(int devindex)
     device->GetDisplayBounds = RASPBERRY_GetDisplayBounds;
 
     device->free = RASPBERRY_DeleteDevice;
-
-#ifdef HAVE_CSUD
-    UsbInitialise();
-#endif // HAVE_CSUD
 
 #ifdef HAVE_USPI
     USPiInitialize ();

@@ -3,7 +3,6 @@ all: kernel.img
 
 include ../kernel/common.mk
 include ../SDL2/pkgconfig.mk
-#include ../csud/pkgconfig.mk
 include ../uspi/pkgconfig.mk
 
 OBJS = \

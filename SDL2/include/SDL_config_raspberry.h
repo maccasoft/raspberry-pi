@@ -146,7 +146,6 @@
 #define HAVE_GCC_SYNC_LOCK_TEST_AND_SET 1
 #endif
 
-/* #undef HAVE_CSUD */
 #define HAVE_USPI
 #define HAVE_NES
 

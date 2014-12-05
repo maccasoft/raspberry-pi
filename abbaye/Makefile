@@ -6,7 +6,6 @@ include ../kernel/common.mk
 include ../SDL2_image/pkgconfig.mk
 include ../SDL2_mixer/pkgconfig.mk
 include ../SDL2/pkgconfig.mk
-#include ../csud/pkgconfig.mk
 include ../uspi/pkgconfig.mk
 include ../libvorbis/pkgconfig.mk
 include ../libpng/pkgconfig.mk

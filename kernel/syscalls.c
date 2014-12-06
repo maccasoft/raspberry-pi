@@ -475,7 +475,7 @@ DRESULT disk_ioctl (
             }
             if (cmd == GET_SECTOR_COUNT)
             {
-                *(DWORD *)buff = 340000; // TODO: Get real number of blocks
+                *(DWORD *)buff = USPiMassStorageDeviceGetCapacity(pdrv - USB);
                 return RES_OK;
             }
             if (cmd == GET_SECTOR_SIZE)

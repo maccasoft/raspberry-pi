@@ -19,15 +19,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef HAVE_USPI
-#include <uspi.h>
-#endif
-
-#include "platform.h"
+#include "kernel.h"
 #include "wiring.h"
-#include "console.h"
-#include "emmc.h"
-#include "ff.h"
 
 #if BYTES_PER_PIXEL == 2
 
@@ -58,169 +51,8 @@ __attribute__ ((interrupt ("IRQ"))) void interrupt_irq() {
 }
 #endif
 
-#define KEY_ESC     0x2900
-
-#define KEY_F1      0x3A00
-#define KEY_F2      0x3B00
-#define KEY_F3      0x3C00
-#define KEY_F4      0x3D00
-#define KEY_F5      0x3E00
-#define KEY_F6      0x3F00
-#define KEY_F7      0x4000
-#define KEY_F8      0x4100
-#define KEY_F9      0x4200
-#define KEY_F10     0x4300
-#define KEY_F11     0x4400
-#define KEY_F12     0x4500
-
-#define KEY_CANC    0x4C00
-#define KEY_INS     0x4900
-#define KEY_PGDN    0x4E00
-#define KEY_PGUP    0x4B00
-#define KEY_END     0x4D00
-#define KEY_HOME    0x4A00
-#define KEY_RIGHT   0x4F00
-#define KEY_LEFT    0x5000
-#define KEY_DOWN    0x5100
-#define KEY_UP      0x5200
-
-#ifdef HAVE_USPI
-
-#define SWAP_BYTES(b)   (((b & 0xFF) << 8) | ((b & 0xFF00) >> 8))
-
-static unsigned char keyNormal_it[] = {
-    0x0, 0x0, 0x0, 0x0, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
-    'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '1', '2',
-    '3', '4', '5', '6', '7', '8', '9', '0', '\r', 0x0, '\b', '\t', ' ', '\'', 0x0, 0x0,
-    '+', '<', 0x0, 0x0, 0x0, '\\', ',', '.', '-', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-    0x0, 0x0, 0x0, 0x0, '/', '*', '-', '+', '\r', '1', '2', '3', '4', '5', '6', '7',
-    '8', '9', '0', '.', '<', 0x0, 0x0, '='
-};
-
-static unsigned char keyShift_it[] = {
-    0x0, 0x0, 0x0, 0x0, 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
-    'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '"',
-    0x0, '$', '%', '&', '/', '(', ')', '=', '\r', 0x0, '\b', '\t', ' ', '?', '^', 0x0,
-    '*', '>', 0x0, 0x0, 0x0, '|', ';', ':', '_', 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-    0x0, 0x0, 0x0, 0x0, '/', '*', '-', '+', '\r', '1', '2', '3', '4', '5', '6', '7',
-    '8', '9', '0', '.', '>', 0x0, 0x0, '='
-};
-
-void LogWrite (const char *pSource, unsigned Severity, const char *pMessage, ...)
-{
-    // Do nothing
-}
-
-void uspi_assertion_failed (const char *pExpr, const char *pFile, unsigned nLine)
-{
-    char temp[256];
-
-    sprintf(temp, "\r\nUSPi assertion failed: %s at %s:%d\r\n\r\n", pExpr, pFile, nLine);
-    addstr(temp);
-
-    while(1);
-}
-
-void DebugHexdump (const void *pBuffer, unsigned nBufLen, const char *pSource /* = 0 */)
-{
-    // Do nothing
-}
-
-#define MAX_KEYS        6
-#define MAX_KEYBUFFER  16
-
-static int readIndex;
-static int writeIndex;
-static int keybufferAvailable;
-static unsigned short keyBuffer[MAX_KEYBUFFER];
-
-int kbd_getchar() {
-    if (keybufferAvailable <= 0)
-        return -1;
-
-    int key = keyBuffer[readIndex++];
-    if (readIndex >= MAX_KEYBUFFER)
-        readIndex = 0;
-
-    keybufferAvailable--;
-
-    return key;
-}
-
-static void put_key(unsigned short key) {
-    if (keybufferAvailable >= MAX_KEYBUFFER)
-        return;
-
-    keyBuffer[writeIndex++] = key;
-    if (writeIndex >= MAX_KEYBUFFER)
-        writeIndex = 0;
-
-    keybufferAvailable++;
-}
-
-static void USPiKeyStatusHandlerRaw (unsigned char ucModifiers, const unsigned char RawKeys[6]) {
-    static int keydown[MAX_KEYS] = { 0, 0, 0, 0, 0, 0 };
-    int i, index;
-    short key;
-
-    for (index = 0; index < MAX_KEYS; index++) {
-        key = RawKeys[index];
-        if (key < 4) { // Invalid key code
-            continue;
-        }
-        for (i = 0; i < MAX_KEYS; i++) {
-            if (key == keydown[i]) {
-                break;
-            }
-        }
-        if (i >= MAX_KEYS) {
-            for (int i = 0; i < MAX_KEYS; i++) {
-                if (keydown[i] == 0) {
-                    if ((ucModifiers & (LSHIFT | RSHIFT)) != 0) {
-                        if (key >= sizeof(keyShift_it)) {
-                            put_key(key);
-                        }
-                        put_key(keyShift_it[key] != 0 ? keyShift_it[key] : SWAP_BYTES(key));
-                    }
-                    else {
-                        if (key >= sizeof(keyNormal_it)) {
-                            put_key(key);
-                        }
-                        put_key(keyNormal_it[key] != 0 ? keyNormal_it[key] : SWAP_BYTES(key));
-                    }
-                    keydown[i] = key;
-                    break;
-                }
-            }
-        }
-    }
-
-    for (i = 0; i < MAX_KEYS; i++) {
-        key = keydown[i];
-        if (key != 0) {
-            for (index = 0; index < MAX_KEYS; index++) {
-                if (RawKeys[index] == key)
-                    break;
-            }
-            if (index >= MAX_KEYS) {
-                keydown[i] = 0;
-            }
-        }
-    }
-}
-
-#endif // HAVE_USPI
-
-void log_printf (const char *ptr, ...)
-{
-    // Do nothing
-}
-
 void main() {
-    int rc, x, y;
-    char temp[64];
+    int rc, x, y, c;
     struct timer_wait tw;
     int led_status = LOW;
 
@@ -242,29 +74,16 @@ void main() {
 
     if (sd_card_init(NULL) == 0) {
         if ((rc = f_mount(&FatFs, "0:", 1)) != FR_OK) {
-            sprintf(temp, "\r\nSD CARD NOT MOUNTED (%d)\r\n", rc);
-            addstr(temp);
+            addstrf("\r\nSD CARD NOT MOUNTED (%d)\r\n", rc);
         }
     }
     else
         addstr("\r\nSD CARD ERROR\r\n");
 
-#ifdef HAVE_USPI
-    USPiInitialize ();
-
-    if (USPiMassStorageDeviceAvailable()) {
-        if ((rc = f_mount(&USPiFatFs, "1:", 1)) != FR_OK) {
-            sprintf(temp, "\r\nUSB DRIVE NOT MOUNTED (%d)\r\n", rc);
-            addstr(temp);
-        }
-    }
-
-    if (USPiKeyboardAvailable()) {
-        USPiKeyboardRegisterKeyStatusHandlerRaw (USPiKeyStatusHandlerRaw);
-    }
-    else
+    usb_init();
+    if (keyboard_init() != 0) {
         addstr("\r\nNO KEYBOARD DETECTED\r\n");
-#endif // HAVE_USPI
+    }
 
     pinMode(16, OUTPUT);
     register_timer(&tw, 250000);
@@ -272,8 +91,7 @@ void main() {
     addstr("\r\nREADY\r\n");
 
     while(1) {
-        int c = kbd_getchar();
-        if (c != -1) {
+        if ((c = getch()) != -1) {
             switch(c) {
                 case KEY_UP:
                     getyx(y, x);
@@ -313,7 +131,7 @@ void main() {
                     addch('\n');
                     break;
                 default:
-                    if (c >= 32 && c < 0x7F) {
+                    if (c < 0x7F) {
                         addch(c);
                     }
                     break;
@@ -326,6 +144,6 @@ void main() {
             toggle_cursor();
         }
 
-        fb_flip();
+        refresh();
     }
 }

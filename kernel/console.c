@@ -15,6 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
+#include <stdarg.h>
 #include <string.h>
 
 #include "console.h"
@@ -343,6 +345,7 @@ int mvaddch(int y, int x, int c) {
 
 void refresh() {
     // Do nothing, updates are immediate
+    fb_flip();
 }
 
 void toggle_cursor() {
@@ -386,4 +389,26 @@ void hide_cursor() {
         }
         cursor_visible = 0;
     }
+}
+
+int addstrf(const char *ptr, ...) {
+    va_list var;
+    char buffer[256];
+
+    va_start (var, ptr);
+    vsnprintf (buffer, sizeof(buffer) - 1, ptr, var);
+    va_end (var);
+
+    return addstr(buffer);
+}
+
+int mvaddstrf(int y, int x, const char *ptr, ...) {
+    va_list var;
+    char buffer[256];
+
+    va_start (var, ptr);
+    vsnprintf (buffer, sizeof(buffer) - 1, ptr, var);
+    va_end (var);
+
+    return mvaddstr(y, x, buffer);
 }

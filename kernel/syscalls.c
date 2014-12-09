@@ -25,7 +25,10 @@
 
 #include "emmc.h"
 #include "ff.h"
+
+#ifdef HAVE_USPI
 #include "uspi.h"
+#endif
 
 extern struct emmc_block_dev emmc_dev;
 
@@ -306,12 +309,14 @@ DSTATUS disk_status (
         case MMC :
             return 0;
 
+#ifdef HAVE_USPI
         default :
             if (!USPiMassStorageDeviceAvailable())
             {
                 return STA_NOINIT;
             }
             return 0;
+#endif
     }
     return STA_NOINIT;
 }
@@ -330,12 +335,14 @@ DSTATUS disk_initialize (
         case MMC :
             return 0;
 
+#ifdef HAVE_USPI
         default :
             if (!USPiMassStorageDeviceAvailable())
             {
                 return STA_NOINIT;
             }
             return 0;
+#endif
     }
     return STA_NOINIT;
 }
@@ -365,6 +372,7 @@ DRESULT disk_read (
             return RES_OK;
         }
 
+#ifdef HAVE_USPI
         default :
         {
             if (!USPiMassStorageDeviceAvailable())
@@ -380,6 +388,7 @@ DRESULT disk_read (
 
             return RES_OK;
         }
+#endif
     }
 
     return RES_PARERR;
@@ -410,6 +419,7 @@ DRESULT disk_write (
             return RES_OK;
         }
 
+#ifdef HAVE_USPI
         default :
         {
             if (!USPiMassStorageDeviceAvailable())
@@ -425,6 +435,7 @@ DRESULT disk_write (
 
             return RES_OK;
         }
+#endif
     }
 
     return RES_PARERR;
@@ -464,6 +475,7 @@ DRESULT disk_ioctl (
             }
             return RES_PARERR;
 
+#ifdef HAVE_USPI
         default :
             if (!USPiMassStorageDeviceAvailable())
             {
@@ -489,6 +501,7 @@ DRESULT disk_ioctl (
                 return RES_OK;
             }
             return RES_PARERR;
+#endif
     }
 
     return RES_PARERR;
@@ -508,3 +521,23 @@ DWORD get_fattime (void)
             | ((DWORD)ltm->tm_sec >> 1);
 }
 #endif
+
+void LogWrite (const char *pSource, unsigned Severity, const char *pMessage, ...)
+{
+    // Do nothing
+}
+
+void uspi_assertion_failed (const char *pExpr, const char *pFile, unsigned nLine)
+{
+    // Do nothing
+}
+
+void DebugHexdump (const void *pBuffer, unsigned nBufLen, const char *pSource /* = 0 */)
+{
+    // Do nothing
+}
+
+void log_printf (const char *ptr, ...)
+{
+    // Do nothing
+}

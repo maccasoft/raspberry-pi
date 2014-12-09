@@ -2,14 +2,11 @@
 all: kernel.img
 
 include ../kernel/common.mk
-include ../uspi/pkgconfig.mk
 
 OBJS = \
 	../kernel/start.o \
 	../kernel/syscalls.o \
 	main.o
-
-CFLAGS += -DHAVE_USPI
 
 -include $(DEPDIR)/*.Po
 

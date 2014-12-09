@@ -179,25 +179,6 @@ void Raspberry_digitalWrite(int pin, int value) {
     }
 }
 
-#ifdef HAVE_USPI
-
-void LogWrite (const char *pSource, unsigned Severity, const char *pMessage, ...)
-{
-    // Do nothing
-}
-
-void uspi_assertion_failed (const char *pExpr, const char *pFile, unsigned nLine)
-{
-    while(1);
-}
-
-void DebugHexdump (const void *pBuffer, unsigned nBufLen, const char *pSource /* = 0 */)
-{
-    // Do nothing
-}
-
-#endif // HAVE_USPI
-
 void SDL_Interrupt_Handler() {
     if ((IRQ->irq1Pending & INTERRUPT_DMA0) != 0)
         RASPBERRYAUD_DmaInterruptHandler();
@@ -205,9 +186,4 @@ void SDL_Interrupt_Handler() {
     else
         USPiInterruptHandler ();
 #endif
-}
-
-void log_printf (const char *ptr, ...)
-{
-    // Do nothing
 }

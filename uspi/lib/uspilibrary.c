@@ -33,7 +33,7 @@ static TUSPiLibrary *s_pLibrary = 0;
 
 int USPiInitialize (void)
 {
-	assert (s_pLibrary == 0);
+	if (s_pLibrary != 0) return 1;
 	s_pLibrary = (TUSPiLibrary *) malloc (sizeof (TUSPiLibrary));
 	assert (s_pLibrary != 0);
 
@@ -92,7 +92,7 @@ int USPiInitialize (void)
 
 int USPiKeyboardAvailable (void)
 {
-	assert (s_pLibrary != 0);
+    if (s_pLibrary == 0) return 0;
 	return s_pLibrary->pUKBD1 != 0;
 }
 
@@ -119,7 +119,7 @@ void USPiKeyboardRegisterKeyStatusHandlerRaw (TKeyStatusHandlerRaw *pKeyStatusHa
 
 int USPiMouseAvailable (void)
 {
-	assert (s_pLibrary != 0);
+    if (s_pLibrary == 0) return 0;
 	return s_pLibrary->pUMouse1 != 0;
 }
 
@@ -132,7 +132,7 @@ void USPiMouseRegisterStatusHandler (TUSPiMouseStatusHandler *pStatusHandler)
 
 int USPiMassStorageDeviceAvailable (void)
 {
-	assert (s_pLibrary != 0);
+    if (s_pLibrary == 0) return 0;
 
 	unsigned i;
 	for (i = 0; i < MAX_DEVICES; i++)
@@ -197,7 +197,7 @@ unsigned USPiMassStorageDeviceGetCapacity (unsigned nDeviceIndex)
 
 int USPiEthernetAvailable (void)
 {
-	assert (s_pLibrary != 0);
+    if (s_pLibrary == 0) return 0;
 	return s_pLibrary->pEth0 != 0;
 }
 
@@ -227,7 +227,7 @@ int USPiReceiveFrame (void *pBuffer, unsigned *pResultLength)
 
 int USPiGamePadAvailable (void)
 {
-	assert (s_pLibrary != 0);
+    if (s_pLibrary == 0) return 0;
 
 	unsigned i;
 	for (i = 0; i < MAX_DEVICES; i++)
@@ -272,7 +272,7 @@ const USPiGamePadState *USPiGamePadGetStatus (unsigned nDeviceIndex)
 
 int USPiDeviceGetInformation (unsigned nClass, unsigned nDeviceIndex, TUSPiDeviceInformation *pInfo)
 {
-	assert (s_pLibrary != 0);
+    if (s_pLibrary == 0) return 0;
 
 	TUSBDevice *pUSBDevice = 0;
 

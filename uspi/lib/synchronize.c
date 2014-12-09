@@ -29,29 +29,10 @@ static volatile boolean s_bWereEnabled;
 
 void uspi_EnterCritical (void)
 {
-	u32 nFlags;
-	__asm volatile ("mrs %0, cpsr" : "=r" (nFlags));
 
-	DisableInterrupts ();
-
-	if (s_nCriticalLevel++ == 0)
-	{
-		s_bWereEnabled = nFlags & 0x80 ? FALSE : TRUE;
-	}
-
-	DataMemBarrier ();
 }
 
 void uspi_LeaveCritical (void)
 {
-	DataMemBarrier ();
 
-	assert (s_nCriticalLevel > 0);
-	if (--s_nCriticalLevel == 0)
-	{
-		if (s_bWereEnabled)
-		{
-			EnableInterrupts ();
-		}
-	}
 }

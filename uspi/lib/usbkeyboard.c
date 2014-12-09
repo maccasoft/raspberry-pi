@@ -63,7 +63,7 @@ void USBKeyboardDevice (TUSBKeyboardDevice *pThis, TUSBDevice *pDevice)
 
 	KeyMap (&pThis->m_KeyMap);
 
-	pThis->m_pReportBuffer = malloc (BOOT_REPORT_SIZE);
+	pThis->m_pReportBuffer = malloc (BOOT_REPORT_SIZE + 1);
 	assert (pThis->m_pReportBuffer != 0);
 }
 

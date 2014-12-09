@@ -267,8 +267,6 @@ void ConnectInterrupt (unsigned nIRQ, TInterruptHandler *pHandler, void *pParam)
 
 void USPiInterruptHandler (void)
 {
-    DataMemBarrier();
-
     u32 nPendReg = ARM_IC_IRQ_PENDING (ARM_IRQ_USB);
     u32 nIRQMask = ARM_IRQ_MASK (ARM_IRQ_USB);
 
@@ -279,8 +277,6 @@ void USPiInterruptHandler (void)
         {
             (*pHandler) (m_pParam[ARM_IRQ_USB]);
         }
-
-        write32 (nPendReg, nIRQMask);
     }
 
 
@@ -294,11 +290,7 @@ void USPiInterruptHandler (void)
         {
             (*pHandler) (m_pParam[ARM_IRQ_TIMER3]);
         }
-
-        write32 (nPendReg, nIRQMask);
     }
-
-    DataMemBarrier();
 }
 
 #define KERNEL_TIMERS       20
@@ -323,12 +315,11 @@ static void TimerInterruptHandler (void *pParam)
     assert (read32 (ARM_SYSTIMER_CS) & (1 << 3));
 
     u32 nCompare = read32 (ARM_SYSTIMER_C3) + CLOCKHZ / HZ;
-    write32 (ARM_SYSTIMER_C3, nCompare);
     if (nCompare < read32 (ARM_SYSTIMER_CLO))            // time may drift
     {
         nCompare = read32 (ARM_SYSTIMER_CLO) + CLOCKHZ / HZ;
-        write32 (ARM_SYSTIMER_C3, nCompare);
     }
+    write32 (ARM_SYSTIMER_C3, nCompare);
 
     write32 (ARM_SYSTIMER_CS, 1 << 3);
 
@@ -368,8 +359,6 @@ unsigned TimerInitialize (void)
     }
 
     ConnectInterrupt(ARM_IRQ_TIMER3, TimerInterruptHandler, 0);
-
-    mmio_write (ARM_SYSTIMER_CLO, -(30 * CLOCKHZ)); // timer wraps soon, to check for problems
     mmio_write (ARM_SYSTIMER_C3, mmio_read (ARM_SYSTIMER_CLO) + CLOCKHZ / HZ);
 
     return 1;

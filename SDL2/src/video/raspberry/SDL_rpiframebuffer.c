@@ -133,14 +133,21 @@ int RASPBERRY_UpdateWindowFramebuffer(_THIS, SDL_Window * window, const SDL_Rect
         fb_buffer = fb_buffer == 0 ? 1 : 0;
         fb_addr = fb_buffer == 0 ? fb_buffer_addr[1] : fb_buffer_addr[0];
 
-        mailbuffer[0] = 8 * 4;
+        mailbuffer[0] = 12 * 4;
         mailbuffer[1] = 0;
-        mailbuffer[2] = TAG_SET_VIRT_OFFSET;
-        mailbuffer[3] = 8;
-        mailbuffer[4] = 8;
+
+        mailbuffer[2] = TAG_SET_VSYNC;
+        mailbuffer[3] = 4;
+        mailbuffer[4] = 4;
         mailbuffer[5] = 0;
-        mailbuffer[6] = fb_buffer * fb_height;
-        mailbuffer[7] = 0;
+
+        mailbuffer[6] = TAG_SET_VIRT_OFFSET;
+        mailbuffer[7] = 8;
+        mailbuffer[8] = 8;
+        mailbuffer[9] = 0;
+        mailbuffer[10] = fb_buffer * fb_height;
+
+        mailbuffer[11] = 0;
         Raspberry_MailboxWrite(MAIL_TAGS, mb_addr);
 
         Raspberry_MailboxRead(MAIL_TAGS);

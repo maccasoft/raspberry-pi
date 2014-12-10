@@ -160,14 +160,15 @@ void fb_wait_vsync() {
     unsigned int mb_addr = 0x40007000;      // 0x7000 in L2 cache coherent mode
     volatile unsigned int *mailbuffer = (unsigned int *) mb_addr;
 
-    mailbuffer[0] = 8 * 4;              // size of this message
-    mailbuffer[1] = 0;                  // this is a request
+    mailbuffer[0] = 7 * 4;
+    mailbuffer[1] = 0;
+
     mailbuffer[2] = TAG_SET_VSYNC;
-    mailbuffer[3] = 4;                  // value buffer size
-    mailbuffer[4] = 4;                  // request/response
-    mailbuffer[5] = 0;                  // space to return width
-    mailbuffer[6] = 0;                  // space to return height
-    mailbuffer[7] = 0;
+    mailbuffer[3] = 4;
+    mailbuffer[4] = 4;
+    mailbuffer[5] = 0;
+
+    mailbuffer[6] = 0;
     mbox_write(MAIL_TAGS, mb_addr);
 
     mbox_read(MAIL_TAGS);
@@ -243,14 +244,21 @@ pixel_t * fb_flip() {
         fb_buffer = fb_buffer == 0 ? 1 : 0;
         fb_addr = fb_buffer == 0 ? fb_buffer_addr[1] : fb_buffer_addr[0];
 
-        mailbuffer[0] = 8 * 4;
+        mailbuffer[0] = 12 * 4;
         mailbuffer[1] = 0;
-        mailbuffer[2] = TAG_SET_VIRT_OFFSET;
-        mailbuffer[3] = 8;
-        mailbuffer[4] = 8;
+
+        mailbuffer[2] = TAG_SET_VSYNC;
+        mailbuffer[3] = 4;
+        mailbuffer[4] = 4;
         mailbuffer[5] = 0;
-        mailbuffer[6] = fb_buffer * fb_height;
-        mailbuffer[7] = 0;
+
+        mailbuffer[6] = TAG_SET_VIRT_OFFSET;
+        mailbuffer[7] = 8;
+        mailbuffer[8] = 8;
+        mailbuffer[9] = 0;
+        mailbuffer[10] = fb_buffer * fb_height;
+
+        mailbuffer[11] = 0;
         mbox_write(MAIL_TAGS, mb_addr);
 
         mbox_read(MAIL_TAGS);

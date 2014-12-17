@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #include "kernel.h"
 #include "wiring.h"
@@ -52,7 +53,7 @@ __attribute__ ((interrupt ("IRQ"))) void interrupt_irq() {
 #endif
 
 void main() {
-    int rc, x, y, c;
+    int x, y, c;
     struct timer_wait tw;
     int led_status = LOW;
 
@@ -72,13 +73,9 @@ void main() {
     mvaddstr(1, 9, "**** RASPBERRY-PI ****");
     mvaddstr(3, 7, "BARE-METAL SYSTEM TEMPLATE\r\n");
 
-    if (sd_card_init(NULL) == 0) {
-        if ((rc = f_mount(&FatFs, "0:", 1)) != FR_OK) {
-            addstrf("\r\nSD CARD NOT MOUNTED (%d)\r\n", rc);
-        }
+    if (mount("sd:") != 0) {
+        addstrf("\r\nSD CARD NOT MOUNTED (%s)\r\n", strerror(errno));
     }
-    else
-        addstr("\r\nSD CARD ERROR\r\n");
 
     usb_init();
     if (keyboard_init() != 0) {

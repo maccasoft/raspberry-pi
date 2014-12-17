@@ -28,6 +28,14 @@
 #include "uspi.h"
 #endif
 
+#define KERNEL_MAJ      0
+#define KERNEL_MIN      1
+#define KERNEL_REV      1
+
+#define KERNEL_NAME     "raspberrypi"
+#define KERNEL_VERSION  "0.1.1"
+#define KERNEL_STRING   "raspberrypi 0.1.1"
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -35,6 +43,9 @@ extern "C" {
 int usb_init();
 
 int keyboard_init();
+
+int mount(const char *source);
+int umount(const char *target);
 
 #if defined(__cplusplus)
 }

@@ -28,7 +28,9 @@ SECTIONS
     }
     
     .ARM.exidx : {
+        __exidx_start = ABSOLUTE(.);
         *(.ARM.exidx* .gnu.linkonce.armexidx.*)
+        __exidx_end = ABSOLUTE(.);
     } 
     
     . = ALIGN(8);

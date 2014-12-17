@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <string.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -30,7 +31,7 @@
 #include "uspi.h"
 #endif
 
-extern struct emmc_block_dev emmc_dev;
+static struct emmc_block_dev *emmc_dev;
 
 /* Definitions of physical drive number for each drive */
 #define MMC     0   /* Map MMC/SD card to drive number 0 */
@@ -39,6 +40,7 @@ extern struct emmc_block_dev emmc_dev;
 #define MAX_DESCRIPTORS         256
 #define RESERVED_DESCRIPTORS    3
 
+static FATFS fat_fs[_VOLUMES];
 static FIL *file_descriptors[MAX_DESCRIPTORS];
 
 void * __dso_handle;
@@ -284,6 +286,47 @@ int chdir(const char * path) {
     return rc == FR_OK ? 0 : -1;
 }
 
+int ftruncate(int file, off_t length) {
+    if (file < RESERVED_DESCRIPTORS || file >= MAX_DESCRIPTORS || file_descriptors[file] == NULL) {
+        errno = EBADF;
+        return -1;
+    }
+
+    FRESULT rc = f_truncate(file_descriptors[file]);
+    errno = FRESULT_to_errno(rc);
+    return rc == FR_OK ? 0 : -1;
+}
+
+static const char * _VOLUME_NAME[_VOLUMES] = {
+    _VOLUME_STRS
+};
+
+int mount(const char *source) {
+    for (int i = 0; i < _VOLUMES; i++) {
+        if (!strncasecmp(source, _VOLUME_NAME[i], strlen(_VOLUME_NAME[i]))) {
+            FRESULT rc = f_mount(&fat_fs[i], source, 1);
+            errno = FRESULT_to_errno(rc);
+            return rc == FR_OK ? 0 : -1;
+        }
+    }
+
+    errno = EINVAL;
+    return -1;
+}
+
+int umount(const char *target) {
+    for (int i = 0; i < _VOLUMES; i++) {
+        if (!strncasecmp(target, _VOLUME_NAME[i], strlen(_VOLUME_NAME[i]))) {
+            FRESULT rc = f_mount(NULL, target, 1);
+            errno = FRESULT_to_errno(rc);
+            return rc == FR_OK ? 0 : -1;
+        }
+    }
+
+    errno = EINVAL;
+    return -1;
+}
+
 void _fini() {
     while(1)
         ;
@@ -302,23 +345,30 @@ int _gettimeofday(struct timeval *tv, struct timezone *tz) {
 /*-----------------------------------------------------------------------*/
 
 DSTATUS disk_status (
-    BYTE pdrv       /* Physical drive nmuber to identify the drive */
+    BYTE pdrv       /* Physical drive number to identify the drive */
 )
 {
     switch (pdrv) {
         case MMC :
-            return 0;
-
-#ifdef HAVE_USPI
-        default :
-            if (!USPiMassStorageDeviceAvailable())
+            if (emmc_dev == NULL)
             {
                 return STA_NOINIT;
             }
             return 0;
+
+#ifdef HAVE_USPI
+        default :
+        {
+            int nDeviceIndex = pdrv - USB;
+            if (nDeviceIndex < 0 || nDeviceIndex >= USPiMassStorageDeviceAvailable())
+            {
+                return STA_NODISK;
+            }
+            return 0;
+        }
 #endif
     }
-    return STA_NOINIT;
+    return STA_NODISK;
 }
 
 
@@ -328,23 +378,33 @@ DSTATUS disk_status (
 /*-----------------------------------------------------------------------*/
 
 DSTATUS disk_initialize (
-    BYTE pdrv               /* Physical drive nmuber to identify the drive */
+    BYTE pdrv               /* Physical drive number to identify the drive */
 )
 {
     switch (pdrv) {
         case MMC :
+            if (emmc_dev == NULL)
+            {
+                if (sd_card_init((struct block_device **)&emmc_dev) != 0)
+                {
+                    return STA_NOINIT;
+                }
+            }
             return 0;
 
 #ifdef HAVE_USPI
         default :
-            if (!USPiMassStorageDeviceAvailable())
+        {
+            int nDeviceIndex = pdrv - USB;
+            if (nDeviceIndex < 0 || nDeviceIndex >= USPiMassStorageDeviceAvailable())
             {
-                return STA_NOINIT;
+                return STA_NODISK;
             }
             return 0;
+        }
 #endif
     }
-    return STA_NOINIT;
+    return STA_NODISK;
 }
 
 
@@ -354,7 +414,7 @@ DSTATUS disk_initialize (
 /*-----------------------------------------------------------------------*/
 
 DRESULT disk_read (
-    BYTE pdrv,      /* Physical drive nmuber to identify the drive */
+    BYTE pdrv,      /* Physical drive number to identify the drive */
     BYTE *buff,     /* Data buffer to store read data */
     DWORD sector,   /* Sector address in LBA */
     UINT count      /* Number of sectors to read */
@@ -363,7 +423,7 @@ DRESULT disk_read (
     switch (pdrv) {
         case MMC :
         {
-            size_t buf_size = count * emmc_dev.bd.block_size;
+            size_t buf_size = count * emmc_dev->bd.block_size;
             if (sd_read(buff, buf_size, sector) < buf_size)
             {
                 return RES_ERROR;
@@ -375,13 +435,14 @@ DRESULT disk_read (
 #ifdef HAVE_USPI
         default :
         {
-            if (!USPiMassStorageDeviceAvailable())
+            int nDeviceIndex = pdrv - USB;
+            if (nDeviceIndex < 0 || nDeviceIndex >= USPiMassStorageDeviceAvailable())
             {
                 return RES_PARERR;
             }
 
             unsigned buf_size = count * USPI_BLOCK_SIZE;
-            if (USPiMassStorageDeviceRead(sector * USPI_BLOCK_SIZE, buff, buf_size, pdrv - USB) < buf_size)
+            if (USPiMassStorageDeviceRead(sector * USPI_BLOCK_SIZE, buff, buf_size, nDeviceIndex) < buf_size)
             {
                 return RES_ERROR;
             }
@@ -401,7 +462,7 @@ DRESULT disk_read (
 /*-----------------------------------------------------------------------*/
 
 DRESULT disk_write (
-    BYTE pdrv,          /* Physical drive nmuber to identify the drive */
+    BYTE pdrv,          /* Physical drive number to identify the drive */
     const BYTE *buff,   /* Data to be written */
     DWORD sector,       /* Sector address in LBA */
     UINT count          /* Number of sectors to write */
@@ -410,7 +471,7 @@ DRESULT disk_write (
     switch (pdrv) {
         case MMC :
         {
-            size_t buf_size = count * emmc_dev.bd.block_size;
+            size_t buf_size = count * emmc_dev->bd.block_size;
             if (sd_write((uint8_t *)buff, buf_size, sector) < buf_size)
             {
                 return RES_ERROR;
@@ -422,13 +483,14 @@ DRESULT disk_write (
 #ifdef HAVE_USPI
         default :
         {
-            if (!USPiMassStorageDeviceAvailable())
+            int nDeviceIndex = pdrv - USB;
+            if (nDeviceIndex < 0 || nDeviceIndex >= USPiMassStorageDeviceAvailable())
             {
                 return RES_PARERR;
             }
 
             unsigned buf_size = count * USPI_BLOCK_SIZE;
-            if (USPiMassStorageDeviceWrite(sector * USPI_BLOCK_SIZE, buff, buf_size, pdrv - USB) < buf_size)
+            if (USPiMassStorageDeviceWrite(sector * USPI_BLOCK_SIZE, buff, buf_size, nDeviceIndex) < buf_size)
             {
                 return RES_ERROR;
             }
@@ -447,7 +509,7 @@ DRESULT disk_write (
 /*-----------------------------------------------------------------------*/
 
 DRESULT disk_ioctl (
-    BYTE pdrv,      /* Physical drive nmuber (0..) */
+    BYTE pdrv,      /* Physical drive number (0..) */
     BYTE cmd,       /* Control code */
     void *buff      /* Buffer to send/receive control data */
 )
@@ -460,24 +522,26 @@ DRESULT disk_ioctl (
             }
             if (cmd == GET_SECTOR_COUNT)
             {
-                *(DWORD *)buff = emmc_dev.bd.num_blocks;
+                *(DWORD *)buff = emmc_dev->bd.num_blocks;
                 return RES_OK;
             }
             if (cmd == GET_SECTOR_SIZE)
             {
-                *(DWORD *)buff = emmc_dev.bd.block_size;
+                *(DWORD *)buff = emmc_dev->bd.block_size;
                 return RES_OK;
             }
             if (cmd == GET_BLOCK_SIZE)
             {
-                *(DWORD *)buff = emmc_dev.bd.block_size;
+                *(DWORD *)buff = emmc_dev->bd.block_size;
                 return RES_OK;
             }
             return RES_PARERR;
 
 #ifdef HAVE_USPI
         default :
-            if (!USPiMassStorageDeviceAvailable())
+        {
+            int nDeviceIndex = pdrv - USB;
+            if (nDeviceIndex < 0 || nDeviceIndex >= USPiMassStorageDeviceAvailable())
             {
                 return RES_PARERR;
             }
@@ -487,7 +551,7 @@ DRESULT disk_ioctl (
             }
             if (cmd == GET_SECTOR_COUNT)
             {
-                *(DWORD *)buff = USPiMassStorageDeviceGetCapacity(pdrv - USB);
+                *(DWORD *)buff = USPiMassStorageDeviceGetCapacity(nDeviceIndex);
                 return RES_OK;
             }
             if (cmd == GET_SECTOR_SIZE)
@@ -501,6 +565,7 @@ DRESULT disk_ioctl (
                 return RES_OK;
             }
             return RES_PARERR;
+        }
 #endif
     }
 

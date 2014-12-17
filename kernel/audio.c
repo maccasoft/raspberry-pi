@@ -36,24 +36,24 @@ static int16_t           * audio_buffer;
 int audio_open(uint32_t samples) {
     volatile uint32_t * ptr;
 
+    max_samples = samples * 2;
+
     for (int i = 0; i < 2; i++) {
         if (dma_buffer[i] != NULL) {
             free(dma_buffer[i]);
         }
-        dma_buffer[i] = (unsigned char *)malloc(samples * 2 * 4 + 15);
+        dma_buffer[i] = (unsigned char *)malloc(max_samples * 4 + 15);
         if (dma_buffer[i] == NULL) {
             return -1;
         }
-        memset(dma_buffer[i], 0, samples * 2 * 4 + 15);
+        memset(dma_buffer[i], 0, max_samples * 4 + 15);
     }
 
-    audio_buffer = (int16_t *)malloc(samples * 2 * 2);
+    audio_buffer = (int16_t *)malloc(max_samples * 2);
     if (audio_buffer == NULL) {
         return -1;
     }
-    memset(audio_buffer, 0, samples * 2 * 2);
-
-    max_samples = samples;
+    memset(audio_buffer, 0, max_samples * 2);
 
     ptr = (uint32_t *) (GPIO_BASE + GPIO_GPFSEL4);
     *ptr = GPIO_FSEL0_ALT0 + GPIO_FSEL5_ALT0;
@@ -74,19 +74,15 @@ int audio_open(uint32_t samples) {
     PWM->rng1 = PWM->rng2 = 11336;
 
     for (int i = 0; i < 2; i++) {
-        uint32_t source_ad = (uint32_t) dma_buffer[i];
-        while((source_ad & 0xF) != 0) {
-            source_ad++;
-        }
         dma_cb[i].ti = DMA_DEST_DREQ | DMA_PERMAP_5 | DMA_SRC_INC | DMA_INTEN;
-        dma_cb[i].source_ad = 0x40000000 + source_ad;
-        dma_cb[i].dest_ad = 0x7E000000 | 0x20C000 | 0x18;
-        dma_cb[i].txfr_len = samples * 2 * 4;
+        dma_cb[i].source_ad = 0x40000000 | (((uint32_t) dma_buffer[i] + 15) & ~0xf);
+        dma_cb[i].dest_ad = 0x7E000000 | PWM_BASE | PWM_FIF1;
+        dma_cb[i].txfr_len = max_samples * 4;
         dma_cb[i].stride = 0;
         dma_cb[i].nextconbk = 0;
     }
 
-    PWM->dmac = PWM_ENAB | 0x0001; // PWM DMA Enable
+    PWM->dmac = PWM_ENAB | 0x0008; // PWM DMA Enable
     PWM->ctl = PWM_USEF2 | PWM_PWEN2 | PWM_USEF1 | PWM_PWEN1 | PWM_CLRF1;
 
     cur_buffer = 0;
@@ -123,6 +119,10 @@ int audio_get_sample_size() {
 void audio_play() {
     uint32_t data;
 
+    for (int i = 0; i < 2; i++) {
+        memset(dma_buffer[i], 0, max_samples * 4 + 15);
+    }
+
     IRQ->irq1Enable = INTERRUPT_DMA0;
 
     DMA->enable = DMA_EN0;  // Set DMA Channel 0 Enable Bit
@@ -144,7 +144,6 @@ void audio_play() {
 
 void audio_stop() {
     IRQ->irq1Disable = INTERRUPT_DMA0;
-    DMA->ch[0].cs = DMA_RESET;
 }
 
 void audio_dma_irq() {
@@ -176,25 +175,18 @@ uint32_t audio_write(int16_t * stream, uint32_t samples) {
         *write_ptr++ = data >> SAMPLE_SHIFT;
         write_size++;
         written++;
-    }
 
-    if (write_size >= max_samples) {
-        while((DMA->ch[0].cs & DMA_ACTIVE) != 0)
-            ;
+        if (write_size >= max_samples) {
+            while((DMA->ch[0].cs & DMA_ACTIVE) != 0)
+                ;
 
-        DMA->enable = DMA_EN0;
-        DMA->ch[0].conblk_ad = 0x40000000 | (uint32_t) &dma_cb[cur_buffer];
-        DMA->ch[0].cs = DMA_ACTIVE;
+            DMA->enable = DMA_EN0;
+            DMA->ch[0].conblk_ad = 0x40000000 | (uint32_t) &dma_cb[cur_buffer];
+            DMA->ch[0].cs = DMA_ACTIVE;
 
-        cur_buffer = cur_buffer == 0 ? 1 : 0;
-        write_ptr = (uint32_t *)dma_cb[cur_buffer].source_ad;
-        write_size = 0;
-
-        while (write_size < max_samples && written < samples) {
-            data = *stream++ + 32768;
-            *write_ptr++ = data >> SAMPLE_SHIFT;
-            write_size++;
-            written++;
+            cur_buffer = cur_buffer == 0 ? 1 : 0;
+            write_ptr = (uint32_t *)dma_cb[cur_buffer].source_ad;
+            write_size = 0;
         }
     }
 

@@ -149,12 +149,8 @@ static int RASPBERRYAUD_OpenDevice(_THIS, const char *devname, int iscapture) {
 
     /* Setup DMA control blocks */
     for (int i = 0; i < 2; i++) {
-        uint32_t source_ad = (uint32_t) dma_buffer[i];
-        while((source_ad & 0xF) != 0) { // Align to 16-bytes boundary
-            source_ad++;
-        }
         dma_cb[i].ti = DMA_DEST_DREQ | DMA_PERMAP_5 | DMA_SRC_INC | DMA_INTEN;
-        dma_cb[i].source_ad = 0x40000000 + source_ad;
+        dma_cb[i].source_ad = 0x40000000 | (((uint32_t) dma_buffer[i] + 15) & ~0xf);
         dma_cb[i].dest_ad = 0x7E000000 | 0x20C000 | 0x18;
         dma_cb[i].txfr_len = this->spec.samples * this->spec.channels * 4;
         dma_cb[i].stride = 0;
@@ -162,7 +158,7 @@ static int RASPBERRYAUD_OpenDevice(_THIS, const char *devname, int iscapture) {
     }
 
     /* PWM DMA Enable */
-    PWM->dmac = PWM_ENAB | 0x0001;
+    PWM->dmac = PWM_ENAB | 0x0008;
     PWM->ctl = PWM_USEF2 | PWM_PWEN2 | PWM_USEF1 | PWM_PWEN1 | PWM_CLRF1;
 
     device = this;

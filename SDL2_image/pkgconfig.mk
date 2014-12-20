@@ -1,5 +1,7 @@
 
 CFLAGS += -I../SDL2_image
 
-LIBS += -L../SDL2_image -lSDL2_image
+LDFLAGS += -L../SDL2_image
+
+LIBS := -lSDL2_image $(LIBS)
 LIBS_DEP += ../SDL2_image/libSDL2_image.a

@@ -25,7 +25,7 @@
 								<option id="gnu.c.compiler.option.preprocessor.def.symbols.1958204956" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" useByScannerDiscovery="false" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="HAVE_USPI"/>
 								</option>
-								<option id="gnu.c.compiler.option.include.paths.461836132" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
+								<option id="gnu.c.compiler.option.include.paths.461836132" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/uspi/include}&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.460505247" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>

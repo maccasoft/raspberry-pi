@@ -1,7 +1,6 @@
 
 all:
 	make -C kernel
-	make -C uspi
 	make -C zlib
 	make -C libpng
 	make -C libogg
@@ -15,7 +14,6 @@ all:
 
 clean:
 	make -C kernel -k clean
-	make -C uspi -k clean
 	make -C zlib -k clean
 	make -C libpng -k clean
 	make -C libogg -k clean

@@ -1,5 +1,7 @@
 
 CFLAGS += -I../libvorbis/include -I../libogg/include
 
-LIBS += -L../libvorbis -L../libogg -lvorbis -logg
+LDFLAGS += -L../libvorbis -L../libogg
+
+LIBS := -lvorbis -logg $(LIBS)
 LIBS_DEP += ../libvorbis/libvorbis.a ../libogg/libogg.a

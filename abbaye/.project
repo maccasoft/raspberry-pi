@@ -7,7 +7,6 @@
 		<project>SDL2_mixer</project>
 		<project>SDL2_image</project>
 		<project>kernel</project>
-		<project>uspi</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

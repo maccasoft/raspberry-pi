@@ -4,7 +4,6 @@
 	<comment></comment>
 	<projects>
 		<project>SDL2</project>
-		<project>uspi</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

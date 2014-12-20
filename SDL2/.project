@@ -3,7 +3,7 @@
 	<name>SDL2</name>
 	<comment></comment>
 	<projects>
-		<project>uspi</project>
+		<project>kernel</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

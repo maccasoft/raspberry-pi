@@ -1,22 +1,28 @@
 
-TOOLCHAIN := arm-none-eabi
+TOOLCHAIN := arm-none-eabi-
  
-CC := $(TOOLCHAIN)-gcc
-CXX := $(TOOLCHAIN)-g++
-LD := $(TOOLCHAIN)-ld
-AS := $(TOOLCHAIN)-as
-AR := $(TOOLCHAIN)-ar
-OBJCOPY := $(TOOLCHAIN)-objcopy
+CC := $(TOOLCHAIN)gcc
+CXX := $(TOOLCHAIN)g++
+LD := $(TOOLCHAIN)ld
+AS := $(TOOLCHAIN)as
+AR := $(TOOLCHAIN)ar
+OBJCOPY := $(TOOLCHAIN)objcopy
 
 DEPDIR := .deps
+USPI := 1
 
 ASFLAGS = --warn -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=softfp
-CFLAGS = -Wall -O2 -ffreestanding -marm -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=softfp -fsigned-char -D__RASPBERRY_PI__ -DHAVE_USPI -I../kernel -I../uspi/include
+CFLAGS = -Wall -O2 -ffreestanding -marm -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=softfp -fsigned-char -I../kernel -D__RASPBERRY_PI__
 CPPFLAGS = $(CFLAGS) -fno-exceptions -fno-unwind-tables -fno-rtti
 LDFLAGS = -T ../kernel/raspberry.ld -nostartfiles -fno-exceptions -fno-unwind-tables -fno-rtti -Wl,-Map=kernel.map -o kernel.elf
 
-LIBS = -L../kernel -lkernel -L../uspi -luspi
-LIBS_DEP = ../kernel/libkernel.a ../uspi/libuspi.a
+ifeq ($(USPI),1)
+CFLAGS += -DHAVE_USPI
+endif
+
+LDFLAGS += -L../kernel
+LIBS += -lkernel
+LIBS_DEP += ../kernel/libkernel.a
 
 %.o: %.c
 	@mkdir -p $(DEPDIR)/$(@D)

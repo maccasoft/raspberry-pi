@@ -3,16 +3,11 @@ all: kernel.img
 
 include ../kernel/common.mk
 
-include ../SDL2_image/pkgconfig.mk
-include ../SDL2_mixer/pkgconfig.mk
-include ../SDL2/pkgconfig.mk
-include ../uspi/pkgconfig.mk
 include ../libvorbis/pkgconfig.mk
 include ../libpng/pkgconfig.mk
-
-KOBJS = \
-	../kernel/start.o \
-	../kernel/syscalls.o
+include ../SDL2/pkgconfig.mk
+include ../SDL2_image/pkgconfig.mk
+include ../SDL2_mixer/pkgconfig.mk
 
 OBJS = \
 	data/enemies.o data/map.o \
@@ -30,8 +25,8 @@ CFLAGS += -finline-functions -funswitch-loops -fpredictive-commoning -fgcse-afte
 
 -include $(DEPDIR)/*.Po
 
-kernel.img: $(KOBJS) $(OBJS) Makefile ../kernel/raspberry.ld $(LIBS_DEP)
-	$(CXX) $(LDFLAGS) $(KOBJS) $(OBJS) $(LIBS)
+kernel.img: $(OBJS) Makefile ../kernel/raspberry.ld $(LIBS_DEP)
+	$(CXX) $(LDFLAGS) $(OBJS) $(LIBS)
 	$(OBJCOPY) kernel.elf -O binary kernel.img
 	rm kernel.elf
 

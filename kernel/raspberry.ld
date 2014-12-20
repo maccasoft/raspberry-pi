@@ -1,5 +1,7 @@
 ENTRY(_start)
 
+STARTUP(start.o)
+
 SECTIONS
 {
     . = 0x8000;

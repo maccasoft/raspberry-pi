@@ -35,9 +35,6 @@
 
 #endif
 
-FATFS FatFs;
-FATFS USPiFatFs;
-
 #if defined(__cplusplus)
 extern "C" {
 #endif

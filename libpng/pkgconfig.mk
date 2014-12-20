@@ -1,5 +1,7 @@
 
 CFLAGS += -I../libpng -I../zlib
 
-LIBS += -L../libpng -lpng -L../zlib -lz
+LDFLAGS += -L../libpng -L../zlib
+
+LIBS := -lpng -lz $(LIBS)
 LIBS_DEP += ../libpng/libpng.a ../zlib/libz.a

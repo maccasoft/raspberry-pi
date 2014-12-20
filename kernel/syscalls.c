@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <string.h>
+#include <strings.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -37,7 +38,7 @@ static struct emmc_block_dev *emmc_dev;
 #define MMC     0   /* Map MMC/SD card to drive number 0 */
 #define USB     1   /* Map USB drive to drive number 1 */
 
-#define MAX_DESCRIPTORS         256
+#define MAX_DESCRIPTORS         64
 #define RESERVED_DESCRIPTORS    3
 
 static FATFS fat_fs[_VOLUMES];
@@ -96,6 +97,37 @@ static int FRESULT_to_errno(FRESULT rc) {
             return EIO;
     }
     return EIO;
+}
+
+int _stat(const char *file, struct stat *st) {
+    FILINFO fno;
+    struct tm ltm;
+
+    FRESULT rc = f_stat(file, &fno);
+
+    if (rc == FR_OK) {
+        ltm.tm_sec = (fno.ftime & 0x1f) << 1;
+        ltm.tm_min = (fno.ftime & 0x3e0) >> 5;
+        ltm.tm_hour = (fno.ftime & 0xf800) >> 11;
+        ltm.tm_mday = (fno.fdate & 0x1f);
+        ltm.tm_mon = ((fno.fdate & 0x1e0) >> 5) - 1;
+        ltm.tm_year = ((fno.fdate & 0xfe00) >> 9) + 80;
+
+        st->st_dev = 0;
+        st->st_ino = 0;
+        st->st_mode = 0;
+        st->st_nlink = 0;
+        st->st_uid = 0;
+        st->st_gid = 0;
+        st->st_rdev = 0;
+        st->st_size = fno.fsize;
+        st->st_atime = st->st_mtime = st->st_ctime = mktime(&ltm);
+        st->st_blksize = 0;
+        st->st_blocks = 0;
+    }
+    errno = FRESULT_to_errno(rc);
+
+    return rc == FR_OK ? 0 : -1;
 }
 
 int _fstat(int file, struct stat *st) {
@@ -578,12 +610,12 @@ DWORD get_fattime (void)
     time_t now = time(NULL);
     struct tm *ltm = localtime(&now);
 
-    return    ((DWORD)(ltm->tm_year - 80) << 25)
-            | ((DWORD)ltm->tm_mon << 21)
-            | ((DWORD)ltm->tm_mday << 16)
-            | ((DWORD)ltm->tm_hour << 11)
-            | ((DWORD)ltm->tm_min << 5)
-            | ((DWORD)ltm->tm_sec >> 1);
+    return   ((DWORD)(ltm->tm_year - 80) << 25)
+           | ((DWORD)(ltm->tm_mon + 1) << 21)
+           | ((DWORD)ltm->tm_mday << 16)
+           | ((DWORD)ltm->tm_hour << 11)
+           | ((DWORD)ltm->tm_min << 5)
+           | ((DWORD)ltm->tm_sec >> 1);
 }
 #endif
 

@@ -1,6 +1,6 @@
 ENTRY(_start)
 
-STARTUP(start.o)
+STARTUP(libkernel.a)
 
 SECTIONS
 {

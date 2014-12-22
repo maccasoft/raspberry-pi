@@ -1,14 +1,16 @@
 
-TOOLCHAIN := arm-none-eabi
+TOOLCHAIN := arm-none-eabi-
  
-CC := $(TOOLCHAIN)-gcc
-CXX := $(TOOLCHAIN)-g++
-LD := $(TOOLCHAIN)-ld
-AS := $(TOOLCHAIN)-as
-AR := $(TOOLCHAIN)-ar
-OBJCOPY := $(TOOLCHAIN)-objcopy
+CC := $(TOOLCHAIN)gcc
+CXX := $(TOOLCHAIN)g++
+LD := $(TOOLCHAIN)ld
+AS := $(TOOLCHAIN)as
+AR := $(TOOLCHAIN)ar
+OBJCOPY := $(TOOLCHAIN)objcopy
 
 DEPDIR := .deps
+
+PREFIX := /opt/raspberry-pi
 
 ASFLAGS = --warn -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=softfp
 CFLAGS = -O3 -I. -I../SDL2/include -I../libogg/include -I../libvorbis/include -ffreestanding -marm -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=softfp -D_REENTRANT -D__RASPBERRY_PI__ -DOGG_MUSIC=1 -DWAV_MUSIC=1
@@ -49,6 +51,12 @@ libSDL2_mixer.a: $(OBJS) Makefile
 
 deps:
 	-@mkdir -p $(DEPDIR)
+
+install:
+	-mkdir -p $(PREFIX)/include/SDL2
+	cp -f SDL_mixer.h $(PREFIX)/include/SDL2
+	-mkdir -p $(PREFIX)/lib
+	cp -f libSDL2_mixer.a $(PREFIX)/lib
 
 clean:
 	rm -f *.o libSDL2_mixer.a

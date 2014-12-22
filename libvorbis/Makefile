@@ -1,14 +1,16 @@
 
-TOOLCHAIN := arm-none-eabi
+TOOLCHAIN := arm-none-eabi-
  
-CC := $(TOOLCHAIN)-gcc
-CXX := $(TOOLCHAIN)-g++
-LD := $(TOOLCHAIN)-ld
-AS := $(TOOLCHAIN)-as
-AR := $(TOOLCHAIN)-ar
-OBJCOPY := $(TOOLCHAIN)-objcopy
+CC := $(TOOLCHAIN)gcc
+CXX := $(TOOLCHAIN)g++
+LD := $(TOOLCHAIN)ld
+AS := $(TOOLCHAIN)as
+AR := $(TOOLCHAIN)ar
+OBJCOPY := $(TOOLCHAIN)objcopy
 
 DEPDIR := .deps
+
+PREFIX := /opt/raspberry-pi
 
 ASFLAGS = --warn -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=softfp
 CFLAGS = -DHAVE_CONFIG_H -I. -I../libogg/include -Iinclude -Ilib -O20 -Wall -Wextra -ffast-math -ffreestanding -marm -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=softfp -D_REENTRANT -fsigned-char -Wdeclaration-after-statement 
@@ -37,6 +39,12 @@ libvorbis.a: $(OBJS) Makefile
 
 %.o: %.s
 	$(AS) $(ASFLAGS) -o $@ $<
+
+install:
+	-mkdir -p $(PREFIX)/include/vorbis
+	cp -f include/vorbis/*.h $(PREFIX)/include/vorbis
+	-mkdir -p $(PREFIX)/lib
+	cp -f libvorbis.a $(PREFIX)/lib
 
 clean:
 	rm -f $(OBJS) libvorbis.a

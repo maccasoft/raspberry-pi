@@ -12,6 +12,16 @@ all:
 	make -C template_sdl
 	make -C abbaye
 
+install:
+	make -C kernel -k install
+	make -C zlib -k install
+	make -C libpng -k install
+	make -C libogg -k install
+	make -C libvorbis -k install
+	make -C SDL2 -k install
+	make -C SDL2_image -k install
+	make -C SDL2_mixer -k install
+
 clean:
 	make -C kernel -k clean
 	make -C zlib -k clean

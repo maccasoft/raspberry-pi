@@ -1,14 +1,16 @@
 
-TOOLCHAIN := arm-none-eabi
+TOOLCHAIN := arm-none-eabi-
  
-CC := $(TOOLCHAIN)-gcc
-CXX := $(TOOLCHAIN)-g++
-LD := $(TOOLCHAIN)-ld
-AS := $(TOOLCHAIN)-as
-AR := $(TOOLCHAIN)-ar
-OBJCOPY := $(TOOLCHAIN)-objcopy
+CC := $(TOOLCHAIN)gcc
+CXX := $(TOOLCHAIN)g++
+LD := $(TOOLCHAIN)ld
+AS := $(TOOLCHAIN)as
+AR := $(TOOLCHAIN)ar
+OBJCOPY := $(TOOLCHAIN)objcopy
 
 DEPDIR := .deps
+
+PREFIX := /opt/raspberry-pi
 
 ASFLAGS = --warn -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=softfp
 CFLAGS = -DHAVE_CONFIG_H -I. -I../zlib -O2 -ffreestanding -marm -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=softfp 
@@ -43,6 +45,12 @@ libpng.a: $(OBJS) Makefile
 
 deps:
 	-@mkdir -p $(DEPDIR)
+
+install:
+	-mkdir -p $(PREFIX)/include
+	cp -f png.h pngconf.h $(PREFIX)/include
+	-mkdir -p $(PREFIX)/lib
+	cp -f libpng.a $(PREFIX)/lib
 
 clean:
 	rm -f *.o libpng.a

@@ -11,6 +11,8 @@ OBJCOPY := $(TOOLCHAIN)objcopy
 DEPDIR := .deps
 USPI := 1
 
+PREFIX := /opt/raspberry-pi
+
 ASFLAGS = --warn -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=softfp
 CFLAGS = -Wall -O2 -ffreestanding -marm -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=softfp -fsigned-char -I../kernel -D__RASPBERRY_PI__
 CPPFLAGS = $(CFLAGS) -fno-exceptions -fno-unwind-tables -fno-rtti

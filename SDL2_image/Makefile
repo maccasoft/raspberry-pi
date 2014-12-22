@@ -1,15 +1,17 @@
 
-TOOLCHAIN := arm-none-eabi
+TOOLCHAIN := arm-none-eabi-
  
-CC := $(TOOLCHAIN)-gcc
-CXX := $(TOOLCHAIN)-g++
-LD := $(TOOLCHAIN)-ld
-AS := $(TOOLCHAIN)-as
-AR := $(TOOLCHAIN)-ar
-OBJCOPY := $(TOOLCHAIN)-objcopy
+CC := $(TOOLCHAIN)gcc
+CXX := $(TOOLCHAIN)g++
+LD := $(TOOLCHAIN)ld
+AS := $(TOOLCHAIN)as
+AR := $(TOOLCHAIN)ar
+OBJCOPY := $(TOOLCHAIN)objcopy
 
 DEPDIR := .deps
 DEFS = -D_REENTRANT -D__RASPBERRY_PI__ -DLOAD_BMP -DLOAD_GIF -DLOAD_PNG -DHAVE_HIDDEN -DSDL_BYTEORDER=SDL_LIL_ENDIAN
+
+PREFIX := /opt/raspberry-pi
 
 ASFLAGS = --warn -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=softfp
 CFLAGS = -O3 -I../SDL2/include -I../libpng -ffreestanding -marm -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=softfp $(DEFS)
@@ -39,6 +41,12 @@ libSDL2_image.a: $(OBJS) Makefile
 
 deps:
 	-@mkdir -p $(DEPDIR)
+
+install:
+	-mkdir -p $(PREFIX)/include/SDL2
+	cp -f SDL_image.h $(PREFIX)/include/SDL2
+	-mkdir -p $(PREFIX)/lib
+	cp -f libSDL2_image.a $(PREFIX)/lib
 
 clean:
 	rm -f *.o libSDL2_image.a

@@ -1,14 +1,16 @@
 
-TOOLCHAIN := arm-none-eabi
+TOOLCHAIN := arm-none-eabi-
  
-CC := $(TOOLCHAIN)-gcc
-CXX := $(TOOLCHAIN)-g++
-LD := $(TOOLCHAIN)-ld
-AS := $(TOOLCHAIN)-as
-AR := $(TOOLCHAIN)-ar
-OBJCOPY := $(TOOLCHAIN)-objcopy
+CC := $(TOOLCHAIN)gcc
+CXX := $(TOOLCHAIN)g++
+LD := $(TOOLCHAIN)ld
+AS := $(TOOLCHAIN)as
+AR := $(TOOLCHAIN)ar
+OBJCOPY := $(TOOLCHAIN)objcopy
 
 DEPDIR := .deps
+
+PREFIX := /opt/raspberry-pi
 
 ASFLAGS = --warn -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=softfp
 CFLAGS = -O3 -Iinclude -Isrc -I../kernel -ffreestanding -fvisibility=hidden -marm -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=softfp -D_REENTRANT -D__RASPBERRY_PI__ -DHAVE_USPI
@@ -35,6 +37,12 @@ libSDL2.a: $(OBJS) Makefile
 
 %.o: %.s
 	$(AS) $(ASFLAGS) -o $@ $<
+
+install:
+	-mkdir -p $(PREFIX)/include/SDL2
+	cp -f include/* $(PREFIX)/include/SDL2
+	-mkdir -p $(PREFIX)/lib
+	cp -f libSDL2.a $(PREFIX)/lib
 
 clean:
 	rm -f $(OBJS) libSDL2.a

@@ -52,6 +52,20 @@ endif
 libkernel.a: $(OBJS) start.o syscalls.o Makefile raspberry.ld
 	$(AR) rcs -o $@ $(OBJS)
 
+install:
+	-mkdir -p $(PREFIX)/include
+	cp -f audio.h console.h emmc.h fb.h kernel.h platform.h wiring.h $(PREFIX)/include
+	-mkdir -p $(PREFIX)/include/fatfs
+	cp -f fatfs/ff.h fatfs/ffconf.h fatfs/integer.h $(PREFIX)/include/fatfs
+	cp -f platform.inc $(PREFIX)/include
+ifeq ($(USPI),1)
+	cp -f uspi.h $(PREFIX)/include
+endif
+	-mkdir -p $(PREFIX)/lib
+	cp -f libkernel.a $(PREFIX)/lib
+	cp -f raspberry.ld $(PREFIX)
+	cp -f rules.mk $(PREFIX)
+
 clean:
-	rm -f $(OBJS) start.o syscalls.o libkernel.a
+	rm -f $(OBJS) libkernel.a
 	rm -rf $(DEPDIR)

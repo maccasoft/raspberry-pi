@@ -1,14 +1,16 @@
 
-TOOLCHAIN := arm-none-eabi
+TOOLCHAIN := arm-none-eabi-
  
-CC := $(TOOLCHAIN)-gcc
-CXX := $(TOOLCHAIN)-g++
-LD := $(TOOLCHAIN)-ld
-AS := $(TOOLCHAIN)-as
-AR := $(TOOLCHAIN)-ar
-OBJCOPY := $(TOOLCHAIN)-objcopy
+CC := $(TOOLCHAIN)gcc
+CXX := $(TOOLCHAIN)g++
+LD := $(TOOLCHAIN)ld
+AS := $(TOOLCHAIN)as
+AR := $(TOOLCHAIN)ar
+OBJCOPY := $(TOOLCHAIN)objcopy
 
 DEPDIR := .deps
+
+PREFIX := /opt/raspberry-pi
 
 ASFLAGS = --warn -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=softfp
 CFLAGS = -O3 -ffreestanding -marm -mcpu=arm1176jzf-s -mfpu=vfp -mfloat-abi=softfp -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN -I. 
@@ -37,6 +39,12 @@ libz.a: $(OBJS) Makefile
 
 %.o: %.s
 	$(AS) $(ASFLAGS) -o $@ $<
+
+install:
+	-mkdir -p $(PREFIX)/include
+	cp -f zlib.h zconf.h $(PREFIX)/include
+	-mkdir -p $(PREFIX)/lib
+	cp -f libz.a $(PREFIX)/lib
 
 clean:
 	rm -f *.o libz.a

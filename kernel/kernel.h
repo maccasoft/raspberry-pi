@@ -22,7 +22,7 @@
 #include "console.h"
 #include "audio.h"
 #include "emmc.h"
-#include "ff.h"
+#include "fatfs/ff.h"
 
 #ifdef HAVE_USPI
 #include "uspi.h"

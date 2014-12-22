@@ -9,7 +9,8 @@ OBJS = \
 	console.o \
 	emmc.o \
 	fb.o \
-	ff.o \
+	fatfs/diskio.o \
+	fatfs/ff.o \
 	platform.o \
 	syscalls.o \
 	usb.o \
